@@ -1,0 +1,75 @@
+body {
+    font-family: 'Arial', sans-serif;
+    line-height: 1.6;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+}
+.container {
+    display: flex;
+    gap: 20px;
+}
+.workflow {
+    width: 30%;
+    background: #f5f5f5;
+    padding: 15px;
+    border-radius: 5px;
+}
+.main-content {
+    width: 70%;
+}
+.stage {
+    margin-bottom: 20px;
+    padding: 15px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+}
+.stage-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+}
+.active {
+    border: 2px solid #4CAF50;
+    background-color: #f9fff9;
+}
+.completed {
+    border: 1px solid #999;
+    background-color: #f9f9f9;
+}
+.hidden {
+    display: none;
+}
+textarea {
+    width: 100%;
+    min-height: 100px;
+    margin-bottom: 10px;
+}
+button {
+    padding: 8px 16px;
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+button:disabled {
+    background-color: #cccccc;
+}
+.feedback-area {
+    margin-top: 10px;
+    padding: 10px;
+    border: 1px dashed #ccc;
+    background-color: #f9f9f9;
+}
+#character-design-output {
+    white-space: pre-wrap;
+    border: 1px solid #ddd;
+    padding: 10px;
+    max-height: 500px;
+    overflow-y: auto;
+    font-family: monospace;
+    background-color: #f9f9f9;
+    margin-bottom: 10px;
+} 

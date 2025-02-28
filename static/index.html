@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI辅助剧本创作系统</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <h1>AI辅助剧本创作系统</h1>
+    
+    <div class="container">
+        <!-- 左侧工作流程图 -->
+        <div class="workflow">
+            <h3>创作流程</h3>
+            <ol>
+                <li id="step-1" class="active">输入初步故事线</li>
+                <li id="step-2">角色设计 (Writer 1)</li>
+                <li id="step-3">角色审阅与反馈 (Editor)</li>
+                <li id="step-4">故事大纲撰写</li>
+                <li id="step-5">大纲审阅与反馈</li>
+                <li id="step-6">子情节扩写</li>
+                <li id="step-7">剧本草拟</li>
+                <li id="step-8">角色扮演补充对话</li>
+                <li id="step-9">输出完整剧本</li>
+            </ol>
+            
+            <div>
+                <h4>创作状态</h4>
+                <p>当前阶段: <span id="current-stage">输入初步故事线</span></p>
+                <p>迭代轮次: <span id="iteration-count">0</span></p>
+                
+                <div id="iteration-settings">
+                    <label for="max-iterations">最大迭代次数:</label>
+                    <select id="max-iterations">
+                        <option value="1">1</option>
+                        <option value="2" selected>2</option>
+                        <option value="3">3</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 右侧主内容区 -->
+        <div class="main-content">
+            <!-- 阶段1: 初步故事线 -->
+            <div id="stage-1" class="stage active">
+                <div class="stage-header">
+                    <h2>初步故事线</h2>
+                </div>
+                <textarea id="preliminary-storyline" placeholder="请输入您的初步故事线，描述故事的基本背景、主题或创意...">一个发生在未来世界的科幻故事，讲述一位普通工程师发现了能够读取人类记忆的技术，并因此卷入一场关乎人类隐私与自由的斗争...</textarea>
+                <button id="submit-storyline">提交并开始角色设计</button>
+            </div>
+            
+            <!-- 阶段2: 角色设计 -->
+            <div id="stage-2" class="stage hidden">
+                <div class="stage-header">
+                    <h2>角色设计</h2>
+                    <span>状态: <span id="character-design-status">生成中...</span></span>
+                </div>
+                <div id="character-design-output"></div>
+                <button id="proceed-to-review" disabled>提交角色设计进行审阅</button>
+            </div>
+            
+            <!-- 阶段3: 角色审阅与反馈 -->
+            <div id="stage-3" class="stage hidden">
+                <div class="stage-header">
+                    <h2>角色审阅与反馈</h2>
+                    <span>状态: <span id="character-review-status">等待中...</span></span>
+                </div>
+                <div class="review-section">
+                    <h3>编辑建议</h3>
+                    <div id="editor-advice-output"></div>
+                </div>
+                <div class="review-section">
+                    <h3>修改后的角色设计</h3>
+                    <div id="revised-character-output"></div>
+                </div>
+                <div id="review-controls">
+                    <button id="start-review-process">开始角色审阅流程</button>
+                    <button id="proceed-to-outline" disabled>完成角色设计，开始大纲编写</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="/static/script.js"></script>
+</body>
+</html>
