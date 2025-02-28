@@ -452,7 +452,183 @@ function formatAndDisplayOutline(outlineXml, container) {
 
 // 处理进入大纲审阅阶段的按钮
 document.getElementById('proceed-to-outline-review').addEventListener('click', function() {
-    alert('大纲已完成！大纲审阅功能将在下一阶段实现。');
+    // 更新UI状态
+    document.getElementById('current-stage').textContent = '大纲审阅与反馈';
+    
+    // 切换到大纲审阅阶段
+    document.getElementById('stage-4').classList.remove('active');
+    document.getElementById('stage-4').classList.add('completed');
+    document.getElementById('stage-4').classList.add('hidden');
+    
+    document.getElementById('stage-5').classList.remove('hidden');
+    document.getElementById('stage-5').classList.add('active');
+    
+    document.getElementById('step-4').classList.remove('active');
+    document.getElementById('step-5').classList.add('active');
+    
+    // 更新状态文本
+    document.getElementById('outline-review-status').textContent = '等待开始';
+    
+    // 启用审阅流程开始按钮
+    document.getElementById('start-outline-review-process').disabled = false;
+});
+
+// 处理开始大纲审阅流程按钮
+document.getElementById('start-outline-review-process').addEventListener('click', function() {
+    // 禁用按钮
+    document.getElementById('start-outline-review-process').disabled = true;
+    
+    // 清空输出区域
+    document.getElementById('outline-editor-advice-output').textContent = '';
+    document.getElementById('revised-outline-output').textContent = '';
+    
+    // 更新状态
+    document.getElementById('outline-review-status').textContent = '审阅中...';
+    document.getElementById('iteration-count').textContent = '0';
+    
+    // 获取最大迭代次数
+    const maxIterations = document.getElementById('max-iterations').value;
+    
+    // 调用API开始大纲审阅流程
+    fetch('/api/review_outline', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ max_iterations: parseInt(maxIterations) }),
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === 'success') {
+            // 获取任务ID后，创建EventSource来监听任务进度
+            const taskId = data.task_id;
+            const eventSource = new EventSource(`/api/tasks/${taskId}/stream`);
+            
+            // 处理事件流
+            eventSource.onmessage = function(event) {
+                const data = JSON.parse(event.data);
+                
+                if (data.status === 'streaming') {
+                    // 对于流式输出，我们只显示最新状态
+                    document.getElementById('outline-review-status').textContent = '数据接收中...';
+                } 
+                else if (data.status === 'complete') {
+                    try {
+                        // 解析迭代数据
+                        const iterationData = JSON.parse(data.content);
+                        
+                        // 更新迭代计数
+                        if (iterationData && iterationData.length > 0) {
+                            const lastIteration = iterationData[iterationData.length - 1];
+                            document.getElementById('iteration-count').textContent = lastIteration.iteration;
+                            
+                            // 清空现有输出区域
+                            const editorAdviceOutput = document.getElementById('outline-editor-advice-output');
+                            const revisedOutlineOutput = document.getElementById('revised-outline-output');
+                            editorAdviceOutput.innerHTML = '';
+                            revisedOutlineOutput.innerHTML = '';
+                            
+                            // 显示所有迭代的结果，每轮都完整显示
+                            iterationData.forEach((iteration, index) => {
+                                // 为每个迭代创建标题
+                                const editorHeader = document.createElement('h4');
+                                editorHeader.textContent = `第 ${iteration.iteration} 轮编辑反馈`;
+                                editorAdviceOutput.appendChild(editorHeader);
+                                
+                                // 添加编辑器建议
+                                const editorAdviceContent = document.createElement('pre');
+                                editorAdviceContent.className = 'iteration-content';
+                                editorAdviceContent.textContent = iteration.editor_advice;
+                                editorAdviceOutput.appendChild(editorAdviceContent);
+                                
+                                // 创建分隔线
+                                const editorDivider = document.createElement('hr');
+                                editorAdviceOutput.appendChild(editorDivider);
+                                
+                                // 为每个迭代创建标题
+                                const writerHeader = document.createElement('h4');
+                                writerHeader.textContent = `第 ${iteration.iteration} 轮大纲修改`;
+                                revisedOutlineOutput.appendChild(writerHeader);
+                                
+                                // 从修改后的大纲中提取并格式化显示
+                                const outlineMatch = /<outline>([\s\S]*?)<\/outline>/.exec(iteration.revised_outline);
+                                if (outlineMatch) {
+                                    const outlineContainer = document.createElement('div');
+                                    formatAndDisplayOutline(outlineMatch[0], outlineContainer);
+                                    revisedOutlineOutput.appendChild(outlineContainer);
+                                } else {
+                                    // 如果无法提取大纲，显示原始内容
+                                    const revisedContent = document.createElement('pre');
+                                    revisedContent.className = 'iteration-content';
+                                    revisedContent.textContent = iteration.revised_outline;
+                                    revisedOutlineOutput.appendChild(revisedContent);
+                                }
+                                
+                                // 创建分隔线
+                                const writerDivider = document.createElement('hr');
+                                revisedOutlineOutput.appendChild(writerDivider);
+                            });
+                        }
+                        
+                        // 更新UI状态
+                        document.getElementById('outline-review-status').textContent = data.is_final ? '已完成' : '等待下一轮迭代';
+                        document.getElementById('start-outline-review-process').disabled = data.is_final;
+                        document.getElementById('proceed-to-scene-expansion').disabled = !data.is_final;
+                        
+                    } catch (e) {
+                        console.error("解析迭代数据失败:", e);
+                        document.getElementById('outline-review-status').textContent = '数据解析错误';
+                    }
+                    
+                    // 关闭事件流
+                    eventSource.close();
+                }
+                else if (data.status === 'error') {
+                    // 显示错误信息
+                    document.getElementById('outline-editor-advice-output').textContent = `错误: ${data.message}`;
+                    document.getElementById('outline-review-status').textContent = '发生错误';
+                    
+                    // 启用重试按钮
+                    document.getElementById('start-outline-review-process').disabled = false;
+                    
+                    // 关闭事件流
+                    eventSource.close();
+                }
+            };
+            
+            // 处理错误
+            eventSource.onerror = function(error) {
+                console.error('EventSource failed:', error);
+                document.getElementById('outline-editor-advice-output').textContent = '连接错误，请刷新页面重试';
+                document.getElementById('outline-review-status').textContent = '连接错误';
+                
+                // 启用重试按钮
+                document.getElementById('start-outline-review-process').disabled = false;
+                
+                eventSource.close();
+            };
+        } else {
+            // 处理错误
+            document.getElementById('outline-editor-advice-output').textContent = data.error || '处理请求时发生错误';
+            document.getElementById('outline-review-status').textContent = '请求错误';
+            
+            // 启用重试按钮
+            document.getElementById('start-outline-review-process').disabled = false;
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        document.getElementById('outline-editor-advice-output').textContent = '处理请求时发生错误';
+        document.getElementById('outline-review-status').textContent = '请求错误';
+        
+        // 启用重试按钮
+        document.getElementById('start-outline-review-process').disabled = false;
+    });
+});
+
+// 处理进入场景扩写阶段的按钮
+document.getElementById('proceed-to-scene-expansion').addEventListener('click', function() {
+    alert('大纲审阅已完成！场景扩写功能将在下一阶段实现。');
 });
 
 // 处理进入审阅阶段的按钮

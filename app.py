@@ -21,6 +21,7 @@ project_thread = None  # 整个项目共用一个线程
 character_writer_assistant = None
 character_editor_assistant = None  # 新增编辑器Assistant
 outline_writer_assistant = None  # 新增大纲撰写Assistant
+outline_editor_assistant = None  # 新增大纲编辑器Assistant
 
 # 存储创作状态
 creation_state = {
@@ -32,7 +33,9 @@ creation_state = {
     'editor_advice': '',    # 存储编辑器的建议
     'max_iterations': 2,    # 默认最大迭代次数
     'outline_xml': '',      # 存储原始XML格式的大纲数据
-    'outline_data': {}      # 存储解析后的大纲数据
+    'outline_data': {},      # 存储解析后的大纲数据
+    'outline_iterations': 0,# 大纲迭代次数
+    'outline_editor_advice': '' # 存储大纲编辑器的建议
 }
 
 # 存储运行中的任务
@@ -40,12 +43,13 @@ active_tasks = {}
 
 # 初始化thread和assistant
 def initialize_openai_resources():
-    global project_thread, character_writer_assistant, character_editor_assistant, outline_writer_assistant
+    global project_thread, character_writer_assistant, character_editor_assistant, outline_writer_assistant, outline_editor_assistant
     
     # 获取环境变量中的assistant ID
     character_writer_assistant_id = os.getenv("CHARACTER_WRITER_THREAD_ID")
     character_editor_assistant_id = os.getenv("CHARACTER_EDITOR_THREAD_ID")
     outline_writer_assistant_id = os.getenv("OUTLINE_WRITER_THREAD_ID")
+    outline_editor_assistant_id = os.getenv("OUTLINE_EDITOR_THREAD_ID")
     
     # 验证assistant ID是否存在
     if not character_writer_assistant_id:
@@ -54,6 +58,8 @@ def initialize_openai_resources():
         raise ValueError("CHARACTER_EDITOR_THREAD_ID not found in environment variables")
     if not outline_writer_assistant_id:
         raise ValueError("OUTLINE_WRITER_THREAD_ID not found in environment variables")
+    if not outline_editor_assistant_id:
+        raise ValueError("OUTLINE_EDITOR_THREAD_ID not found in environment variables")
     
     # 获取已创建的assistants
     try:
@@ -65,6 +71,9 @@ def initialize_openai_resources():
         
         outline_writer_assistant = client.beta.assistants.retrieve(outline_writer_assistant_id)
         print(f"Outline Writer Assistant loaded: {outline_writer_assistant.id}")
+        
+        outline_editor_assistant = client.beta.assistants.retrieve(outline_editor_assistant_id)
+        print(f"Outline Editor Assistant loaded: {outline_editor_assistant.id}")
     except Exception as e:
         print(f"Error retrieving assistant: {e}")
         raise
@@ -128,7 +137,8 @@ def initialize():
         "thread_id": project_thread.id,
         "character_writer_assistant_id": character_writer_assistant.id,
         "character_editor_assistant_id": character_editor_assistant.id,
-        "outline_writer_assistant_id": outline_writer_assistant.id
+        "outline_writer_assistant_id": outline_writer_assistant.id,
+        "outline_editor_assistant_id": outline_editor_assistant.id
     })
 
 @app.route('/api/generate_characters', methods=['POST'])
@@ -662,6 +672,238 @@ def generate_outline():
     
     # 启动处理线程
     thread = threading.Thread(target=process_task)
+    thread.daemon = True
+    thread.start()
+    
+    return jsonify({"status": "success", "task_id": task_id})
+
+@app.route('/api/review_outline', methods=['POST'])
+def review_outline():
+    # 创建任务ID
+    task_id = str(uuid.uuid4())
+    
+    # 获取请求中的数据
+    data = request.json
+    max_iterations = data.get('max_iterations', 2)
+    
+    # 更新最大迭代次数
+    creation_state['max_iterations'] = max_iterations
+    
+    # 存储任务信息
+    active_tasks[task_id] = {
+        "status": "pending",
+        "content": "",
+        "run_id": None,
+        "iteration_data": []  # 保存每次迭代的数据
+    }
+    
+    # 启动异步处理
+    def process_review():
+        try:
+            # 加载提示词模板
+            prompts = load_prompts()
+            current_iteration = 0
+            is_first_iteration = True
+            
+            # 使用当前的大纲
+            current_outline_xml = creation_state['outline_xml']
+            
+            # 迭代循环直到达到最大迭代次数或编辑器返回"None"
+            while current_iteration < max_iterations:
+                # 存储当前迭代的数据
+                iteration_data = {
+                    "iteration": current_iteration + 1,
+                    "editor_advice": "",
+                    "revised_outline": ""
+                }
+                
+                # 选择正确的editor提示词
+                if is_first_iteration:
+                    # 第一次迭代使用feedback_prompt
+                    editor_prompt = prompts["outline"]["editor"]["feedback_prompt"]
+                    editor_prompt = editor_prompt.replace("[initial outline written by Writer]", current_outline_xml)
+                else:
+                    # 后续迭代使用continue_feedback_prompt
+                    editor_prompt = prompts["outline"]["editor"]["continue_feedback_prompt"]
+                    editor_prompt = editor_prompt.replace("[Writer's revised outline]", current_outline_xml)
+                
+                # 替换共用的占位符
+                editor_prompt = editor_prompt.replace("[preliminary storyline]", creation_state['storyline'])
+                editor_prompt = editor_prompt.replace("[characters]", creation_state['characters_xml'])
+                
+                # 更新任务状态
+                active_tasks[task_id]["status"] = "running"
+                
+                # 创建消息
+                client.beta.threads.messages.create(
+                    thread_id=project_thread.id,
+                    role="user",
+                    content=editor_prompt
+                )
+                
+                # 运行outline editor assistant
+                run = client.beta.threads.runs.create(
+                    thread_id=project_thread.id,
+                    assistant_id=outline_editor_assistant.id
+                )
+                
+                active_tasks[task_id]["run_id"] = run.id
+                
+                # 监控run状态
+                while True:
+                    run_status = client.beta.threads.runs.retrieve(
+                        thread_id=project_thread.id,
+                        run_id=run.id
+                    )
+                    
+                    if run_status.status == 'completed':
+                        break
+                    elif run_status.status in ['failed', 'cancelled', 'expired']:
+                        active_tasks[task_id]["status"] = "error"
+                        active_tasks[task_id]["error"] = f"Editor run failed with status: {run_status.status}"
+                        return
+                    
+                    time.sleep(1)
+                
+                # 获取消息
+                messages = client.beta.threads.messages.list(
+                    thread_id=project_thread.id
+                )
+                
+                # 获取最新的assistant消息
+                editor_message = None
+                for msg in messages.data:
+                    if msg.role == "assistant":
+                        editor_message = msg
+                        break
+                
+                if editor_message:
+                    editor_content = editor_message.content[0].text.value
+                    
+                    # 提取建议
+                    advice_match = re.search(r'<advice>(.*?)</advice>', editor_content, re.DOTALL)
+                    if advice_match:
+                        advice = advice_match.group(1).strip()
+                        
+                        # 检查是否返回"None"，表示不需要更多修改
+                        if advice.lower() == "none":
+                            creation_state['current_stage'] = 5  # 更新阶段为大纲审阅完成
+                            active_tasks[task_id]["status"] = "completed"
+                            active_tasks[task_id]["content"] = json.dumps(active_tasks[task_id]["iteration_data"])
+                            active_tasks[task_id]["is_final"] = True
+                            return
+                        
+                        # 保存建议
+                        creation_state['outline_editor_advice'] = advice
+                        iteration_data["editor_advice"] = editor_content
+                        
+                        # 更新任务内容以显示编辑器建议
+                        active_tasks[task_id]["status"] = "running"
+                        active_tasks[task_id]["content"] = json.dumps([iteration_data])
+                        
+                        # 使用Writer修改大纲
+                        writer_prompt = prompts["outline"]["writer"]["revise_prompt"]
+                        writer_prompt = writer_prompt.replace("[Editor's advice on the outline]", advice)
+                        writer_prompt = writer_prompt.replace("[preliminary storyline]", creation_state['storyline'])
+                        writer_prompt = writer_prompt.replace("[characters]", creation_state['characters_xml'])
+                        
+                        # 创建消息
+                        client.beta.threads.messages.create(
+                            thread_id=project_thread.id,
+                            role="user",
+                            content=writer_prompt
+                        )
+                        
+                        # 运行outline writer assistant
+                        writer_run = client.beta.threads.runs.create(
+                            thread_id=project_thread.id,
+                            assistant_id=outline_writer_assistant.id
+                        )
+                        
+                        active_tasks[task_id]["run_id"] = writer_run.id
+                        
+                        # 监控writer run状态
+                        while True:
+                            writer_run_status = client.beta.threads.runs.retrieve(
+                                thread_id=project_thread.id,
+                                run_id=writer_run.id
+                            )
+                            
+                            if writer_run_status.status == 'completed':
+                                break
+                            elif writer_run_status.status in ['failed', 'cancelled', 'expired']:
+                                active_tasks[task_id]["status"] = "error"
+                                active_tasks[task_id]["error"] = f"Writer run failed with status: {writer_run_status.status}"
+                                return
+                            
+                            time.sleep(1)
+                        
+                        # 获取消息
+                        messages = client.beta.threads.messages.list(
+                            thread_id=project_thread.id
+                        )
+                        
+                        # 获取最新的assistant消息
+                        writer_message = None
+                        for msg in messages.data:
+                            if msg.role == "assistant":
+                                writer_message = msg
+                                break
+                        
+                        if writer_message:
+                            writer_content = writer_message.content[0].text.value
+                            
+                            # 提取大纲内容
+                            outline_match = re.search(r'<outline>(.*?)</outline>', writer_content, re.DOTALL)
+                            if outline_match:
+                                revised_outline_xml = f"<outline>{outline_match.group(1)}</outline>"
+                                
+                                # 更新创作状态
+                                current_outline_xml = revised_outline_xml
+                                creation_state['outline_xml'] = revised_outline_xml
+                                creation_state['outline_data'] = parse_outline_xml(revised_outline_xml)
+                                creation_state['outline_iterations'] += 1
+                                
+                                # 保存修改后的大纲
+                                iteration_data["revised_outline"] = writer_content
+                                active_tasks[task_id]["iteration_data"].append(iteration_data)
+                                
+                                # 更新任务内容
+                                active_tasks[task_id]["content"] = json.dumps(active_tasks[task_id]["iteration_data"])
+                                
+                                # 准备下一次迭代
+                                current_iteration += 1
+                                is_first_iteration = False
+                                
+                                # 检查是否达到最大迭代次数
+                                if current_iteration >= max_iterations:
+                                    creation_state['current_stage'] = 5  # 更新阶段为大纲审阅完成
+                                    active_tasks[task_id]["status"] = "completed"
+                                    active_tasks[task_id]["is_final"] = True
+                                    return
+                            else:
+                                active_tasks[task_id]["status"] = "error"
+                                active_tasks[task_id]["error"] = "Failed to extract outline from writer response"
+                                return
+                        else:
+                            active_tasks[task_id]["status"] = "error"
+                            active_tasks[task_id]["error"] = "Failed to get writer response"
+                            return
+                    else:
+                        active_tasks[task_id]["status"] = "error"
+                        active_tasks[task_id]["error"] = "No advice found in editor response"
+                        return
+                else:
+                    active_tasks[task_id]["status"] = "error"
+                    active_tasks[task_id]["error"] = "Failed to get editor response"
+                    return
+                
+        except Exception as e:
+            active_tasks[task_id]["status"] = "error"
+            active_tasks[task_id]["error"] = str(e)
+    
+    # 启动处理线程
+    thread = threading.Thread(target=process_review)
     thread.daemon = True
     thread.start()
     

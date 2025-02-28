@@ -98,6 +98,26 @@
                 </div>
                 <button id="proceed-to-outline-review" disabled>提交大纲进行审阅</button>
             </div>
+            
+            <!-- 阶段5: 大纲审阅与反馈 -->
+            <div id="stage-5" class="stage hidden">
+                <div class="stage-header">
+                    <h2>大纲审阅与反馈</h2>
+                    <span>状态: <span id="outline-review-status">等待中...</span></span>
+                </div>
+                <div class="review-section">
+                    <h3>编辑建议</h3>
+                    <div id="outline-editor-advice-output"></div>
+                </div>
+                <div class="review-section">
+                    <h3>修改后的大纲</h3>
+                    <div id="revised-outline-output"></div>
+                </div>
+                <div id="outline-review-controls">
+                    <button id="start-outline-review-process">开始大纲审阅流程</button>
+                    <button id="proceed-to-scene-expansion" disabled>完成大纲设计，开始场景扩写</button>
+                </div>
+            </div>
         </div>
     </div>
     

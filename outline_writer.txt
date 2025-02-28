@@ -30,3 +30,7 @@ Ava discovers the app and starts to use it to improve her life and the lives of 
 Tess, about the app's dark side, and the two girls try to figure out a way to stop the app's power from consuming Ava's life.
 \n<scene> </scene> <characters> Ava Rose, Tess Sawyer </characters> \n</plot_2>\n<plot_2a>\n...\n</plot_2a>\n...\n</outline>\nStrictly 
 obey the above format and do not generate any redundant content!
+
+Here is the Editor's feedback on the story outline you recently wrote:\n<advice>\n[Editor's advice on the outline]\n</advice>\n
+Please revise your written story outline based on the advice.\nThe storyline and characters originally given to you were:\n
+Storyline:\n[preliminary storyline]\nCharacters:\n[characters]\nKeep the format of the story outline same as the one before your revision.
