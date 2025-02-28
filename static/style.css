@@ -72,4 +72,88 @@ button:disabled {
     font-family: monospace;
     background-color: #f9f9f9;
     margin-bottom: 10px;
+}
+
+/* 迭代内容样式 */
+.iteration-content {
+    white-space: pre-wrap;
+    background-color: #f9f9f9;
+    border: 1px solid #ddd;
+    padding: 10px;
+    margin: 5px 0;
+    max-height: 300px;
+    overflow-y: auto;
+    font-family: monospace;
+}
+
+.review-section {
+    margin-bottom: 20px;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    background-color: #fff;
+}
+
+.review-section h3 {
+    margin-top: 0;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #eee;
+}
+
+.review-section h4 {
+    margin: 15px 0 5px 0;
+    color: #2c3e50;
+}
+
+.review-section hr {
+    margin: 15px 0;
+    border: 0;
+    height: 1px;
+    background-color: #eee;
+}
+
+#review-controls {
+    margin-top: 20px;
+    display: flex;
+    justify-content: space-between;
+}
+
+/* 大纲相关样式 */
+.outline-section {
+    margin-bottom: 20px;
+}
+
+#outline-output-container {
+    margin-top: 15px;
+}
+
+.formatted-outline {
+    margin-top: 10px;
+}
+
+.main-plot, .sub-plot {
+    margin-bottom: 15px;
+    padding: 10px;
+    border-radius: 5px;
+}
+
+.main-plot {
+    background-color: #f0f8ff;
+    border-left: 4px solid #4169e1;
+}
+
+.sub-plot {
+    background-color: #f9f9f9;
+    border-left: 4px solid #a0a0a0;
+    margin-left: 20px;
+}
+
+.plot-scene, .plot-characters {
+    margin-top: 5px;
+    font-size: 0.9em;
+    color: #555;
+}
+
+.raw-outline.hidden {
+    display: none;
 } 

@@ -81,6 +81,23 @@
                     <button id="proceed-to-outline" disabled>完成角色设计，开始大纲编写</button>
                 </div>
             </div>
+            
+            <!-- 阶段4: 故事大纲撰写 -->
+            <div id="stage-4" class="stage hidden">
+                <div class="stage-header">
+                    <h2>故事大纲撰写</h2>
+                    <span>状态: <span id="outline-status">等待中...</span></span>
+                </div>
+                <div class="outline-section">
+                    <p>基于您提供的故事线和已设计的角色，AI将为您撰写完整的故事大纲。</p>
+                    <button id="generate-outline">开始生成大纲</button>
+                </div>
+                <div id="outline-output-container">
+                    <h3>故事大纲</h3>
+                    <div id="outline-output"></div>
+                </div>
+                <button id="proceed-to-outline-review" disabled>提交大纲进行审阅</button>
+            </div>
         </div>
     </div>
     

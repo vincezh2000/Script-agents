@@ -20,6 +20,7 @@ client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 project_thread = None  # 整个项目共用一个线程
 character_writer_assistant = None
 character_editor_assistant = None  # 新增编辑器Assistant
+outline_writer_assistant = None  # 新增大纲撰写Assistant
 
 # 存储创作状态
 creation_state = {
@@ -29,7 +30,9 @@ creation_state = {
     'characters_data': {},  # 存储解析后的角色数据（方便后续使用）
     'character_iterations': 0,
     'editor_advice': '',    # 存储编辑器的建议
-    'max_iterations': 2     # 默认最大迭代次数
+    'max_iterations': 2,    # 默认最大迭代次数
+    'outline_xml': '',      # 存储原始XML格式的大纲数据
+    'outline_data': {}      # 存储解析后的大纲数据
 }
 
 # 存储运行中的任务
@@ -37,17 +40,20 @@ active_tasks = {}
 
 # 初始化thread和assistant
 def initialize_openai_resources():
-    global project_thread, character_writer_assistant, character_editor_assistant
+    global project_thread, character_writer_assistant, character_editor_assistant, outline_writer_assistant
     
     # 获取环境变量中的assistant ID
     character_writer_assistant_id = os.getenv("CHARACTER_WRITER_THREAD_ID")
     character_editor_assistant_id = os.getenv("CHARACTER_EDITOR_THREAD_ID")
+    outline_writer_assistant_id = os.getenv("OUTLINE_WRITER_THREAD_ID")
     
     # 验证assistant ID是否存在
     if not character_writer_assistant_id:
         raise ValueError("CHARACTER_WRITER_THREAD_ID not found in environment variables")
     if not character_editor_assistant_id:
-        raise ValueError("EDITOR_THREAD_ID not found in environment variables")
+        raise ValueError("CHARACTER_EDITOR_THREAD_ID not found in environment variables")
+    if not outline_writer_assistant_id:
+        raise ValueError("OUTLINE_WRITER_THREAD_ID not found in environment variables")
     
     # 获取已创建的assistants
     try:
@@ -56,6 +62,9 @@ def initialize_openai_resources():
         
         character_editor_assistant = client.beta.assistants.retrieve(character_editor_assistant_id)
         print(f"Character Editor Assistant loaded: {character_editor_assistant.id}")
+        
+        outline_writer_assistant = client.beta.assistants.retrieve(outline_writer_assistant_id)
+        print(f"Outline Writer Assistant loaded: {outline_writer_assistant.id}")
     except Exception as e:
         print(f"Error retrieving assistant: {e}")
         raise
@@ -118,7 +127,8 @@ def initialize():
         "status": "success", 
         "thread_id": project_thread.id,
         "character_writer_assistant_id": character_writer_assistant.id,
-        "character_editor_assistant_id": character_editor_assistant.id
+        "character_editor_assistant_id": character_editor_assistant.id,
+        "outline_writer_assistant_id": outline_writer_assistant.id
     })
 
 @app.route('/api/generate_characters', methods=['POST'])
@@ -513,6 +523,149 @@ def stream_task(task_id):
 @app.route('/api/get_creation_state', methods=['GET'])
 def get_creation_state():
     return jsonify(creation_state)
+
+# 解析XML格式的大纲数据
+def parse_outline_xml(xml_content):
+    outline = {}
+    
+    # 使用正则表达式提取主要情节和子情节
+    plot_pattern = r'<plot_(\w+)>(.*?)</plot_\1>'
+    scene_pattern = r'<scene>(.*?)</scene>'
+    characters_pattern = r'<characters>(.*?)</characters>'
+    
+    # 查找所有情节块
+    plot_matches = re.finditer(plot_pattern, xml_content, re.DOTALL)
+    
+    for match in plot_matches:
+        plot_id = match.group(1)
+        plot_content = match.group(2).strip()
+        
+        # 提取场景
+        scene_match = re.search(scene_pattern, plot_content, re.DOTALL)
+        scene = scene_match.group(1).strip() if scene_match else ""
+        
+        # 提取角色
+        characters_match = re.search(characters_pattern, plot_content, re.DOTALL)
+        characters = characters_match.group(1).strip() if characters_match else ""
+        
+        # 删除场景和角色标签，获取纯情节内容
+        content = re.sub(scene_pattern, '', plot_content, flags=re.DOTALL)
+        content = re.sub(characters_pattern, '', content, flags=re.DOTALL).strip()
+        
+        outline[plot_id] = {
+            "content": content,
+            "scene": scene,
+            "characters": characters
+        }
+    
+    return outline
+
+@app.route('/api/generate_outline', methods=['POST'])
+def generate_outline():
+    # 创建任务ID
+    task_id = str(uuid.uuid4())
+    
+    # 获取请求中的数据
+    data = request.json
+    
+    # 存储任务信息
+    active_tasks[task_id] = {
+        "status": "pending",
+        "content": "",
+        "run_id": None
+    }
+    
+    # 启动异步处理
+    def process_task():
+        try:
+            # 加载提示词模板
+            prompts = load_prompts()
+            
+            # 使用大纲生成提示词
+            generate_prompt = prompts["outline"]["writer"]["generate_prompt"]
+            
+            # 替换提示词中的占位符
+            generate_prompt = generate_prompt.replace("[preliminary storyline]", creation_state['storyline'])
+            generate_prompt = generate_prompt.replace("[Characters output in the prior step.]", creation_state['characters_xml'])
+            
+            # 更新任务状态
+            active_tasks[task_id]["status"] = "running"
+            
+            # 创建消息
+            client.beta.threads.messages.create(
+                thread_id=project_thread.id,
+                role="user",
+                content=generate_prompt
+            )
+            
+            # 运行outline writer assistant
+            run = client.beta.threads.runs.create(
+                thread_id=project_thread.id,
+                assistant_id=outline_writer_assistant.id
+            )
+            
+            active_tasks[task_id]["run_id"] = run.id
+            
+            # 监控run状态
+            while True:
+                run_status = client.beta.threads.runs.retrieve(
+                    thread_id=project_thread.id,
+                    run_id=run.id
+                )
+                
+                if run_status.status == 'completed':
+                    break
+                elif run_status.status in ['failed', 'cancelled', 'expired']:
+                    active_tasks[task_id]["status"] = "error"
+                    active_tasks[task_id]["error"] = f"Run failed with status: {run_status.status}"
+                    return
+                
+                time.sleep(1)
+            
+            # 获取消息
+            messages = client.beta.threads.messages.list(
+                thread_id=project_thread.id
+            )
+            
+            # 获取最新的assistant消息
+            latest_message = None
+            for msg in messages.data:
+                if msg.role == "assistant":
+                    latest_message = msg
+                    break
+            
+            if latest_message:
+                content = latest_message.content[0].text.value
+                
+                # 提取<outline>标签内的内容
+                outline_match = re.search(r'<outline>(.*?)</outline>', content, re.DOTALL)
+                if outline_match:
+                    outline_xml = f"<outline>{outline_match.group(1)}</outline>"
+                    
+                    # 更新创作状态
+                    creation_state['outline_xml'] = outline_xml
+                    creation_state['outline_data'] = parse_outline_xml(outline_xml)
+                    creation_state['current_stage'] = 4  # 更新阶段为大纲撰写完成
+                    
+                    # 完成任务
+                    active_tasks[task_id]["status"] = "completed"
+                    active_tasks[task_id]["content"] = content
+                else:
+                    active_tasks[task_id]["status"] = "error"
+                    active_tasks[task_id]["error"] = "No outline data found in response"
+            else:
+                active_tasks[task_id]["status"] = "error"
+                active_tasks[task_id]["error"] = "Failed to get outline writer response"
+        except Exception as e:
+            active_tasks[task_id]["status"] = "error"
+            active_tasks[task_id]["error"] = str(e)
+    
+    # 启动处理线程
+    thread = threading.Thread(target=process_task)
+    thread.daemon = True
+    thread.start()
+    
+    return jsonify({"status": "success", "task_id": task_id})
 
 if __name__ == '__main__':
     # 在应用启动时立即初始化OpenAI资源
