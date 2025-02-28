@@ -386,116 +386,58 @@ function formatAndDisplayOutline(outlineXml, container) {
         
         plots.push({
             id: plotId,
-            isMainPlot: plotId.length === 1 || (!isNaN(plotId) && !plotId.includes('a') && !plotId.includes('b')),
-            parentId: plotId.match(/^\d+/) ? plotId.match(/^\d+/)[0] : null, // 提取父情节ID
+            isMainPlot: plotId.length === 1 || !isNaN(plotId),
             content: textContent,
             scene: sceneMatch ? sceneMatch[1].trim() : '',
             characters: charactersMatch ? charactersMatch[1].trim() : ''
         });
     }
     
-    // 按照ID排序，确保主情节在前
+    // 按照ID排序，确保主情节在前，子情节按顺序排列
     plots.sort((a, b) => {
-        // 如果有相同的父ID，按完整ID排序
-        if (a.parentId === b.parentId) {
-            return a.id.localeCompare(b.id, undefined, {numeric: true, sensitivity: 'base'});
-        }
-        
-        // 不同的父ID，主情节优先
+        // 先比较是否是主情节
         if (a.isMainPlot && !b.isMainPlot) return -1;
         if (!a.isMainPlot && b.isMainPlot) return 1;
         
         // 如果都是主情节或都是子情节，按ID排序
-        return a.parentId.localeCompare(b.parentId, undefined, {numeric: true, sensitivity: 'base'});
+        return a.id.localeCompare(b.id, undefined, {numeric: true, sensitivity: 'base'});
     });
     
-    // 按照主情节分组
-    const plotGroups = {};
+    // 创建大纲元素
     plots.forEach(plot => {
-        const mainId = plot.isMainPlot ? plot.id : plot.parentId;
-        if (!plotGroups[mainId]) {
-            plotGroups[mainId] = [];
-        }
-        plotGroups[mainId].push(plot);
-    });
-    
-    // 按顺序创建每个主情节及其子情节
-    Object.keys(plotGroups).sort((a, b) => {
-        return a.localeCompare(b, undefined, {numeric: true, sensitivity: 'base'});
-    }).forEach(mainId => {
-        const mainPlotGroup = plotGroups[mainId];
+        const plotElement = document.createElement('div');
+        plotElement.className = plot.isMainPlot ? 'main-plot' : 'sub-plot';
         
-        // 先找出并创建主情节
-        const mainPlot = mainPlotGroup.find(p => p.isMainPlot);
-        if (mainPlot) {
-            // 创建主情节元素
-            const mainPlotElement = document.createElement('div');
-            mainPlotElement.className = 'main-plot';
-            
-            // 创建主情节标题
-            const titleElement = document.createElement('h4');
-            titleElement.textContent = `主情节 ${mainPlot.id}`;
-            mainPlotElement.appendChild(titleElement);
-            
-            // 创建主情节内容
-            const contentElement = document.createElement('p');
-            contentElement.textContent = mainPlot.content;
-            mainPlotElement.appendChild(contentElement);
-            
-            // 如果有场景信息，添加场景
-            if (mainPlot.scene) {
-                const sceneElement = document.createElement('div');
-                sceneElement.className = 'plot-scene';
-                sceneElement.innerHTML = `<strong>场景:</strong> ${mainPlot.scene}`;
-                mainPlotElement.appendChild(sceneElement);
-            }
-            
-            // 如果有角色信息，添加角色
-            if (mainPlot.characters) {
-                const charactersElement = document.createElement('div');
-                charactersElement.className = 'plot-characters';
-                charactersElement.innerHTML = `<strong>角色:</strong> ${mainPlot.characters}`;
-                mainPlotElement.appendChild(charactersElement);
-            }
-            
-            // 添加到大纲容器
-            outlineElement.appendChild(mainPlotElement);
-            
-            // 然后添加所有属于这个主情节的子情节
-            mainPlotGroup.filter(p => !p.isMainPlot).forEach(subPlot => {
-                const subPlotElement = document.createElement('div');
-                subPlotElement.className = 'sub-plot';
-                
-                // 创建子情节标题
-                const subTitleElement = document.createElement('h4');
-                subTitleElement.textContent = `子情节 ${subPlot.id}`;
-                subPlotElement.appendChild(subTitleElement);
-                
-                // 创建子情节内容
-                const subContentElement = document.createElement('p');
-                subContentElement.textContent = subPlot.content;
-                subPlotElement.appendChild(subContentElement);
-                
-                // 如果有场景信息，添加场景
-                if (subPlot.scene) {
-                    const subSceneElement = document.createElement('div');
-                    subSceneElement.className = 'plot-scene';
-                    subSceneElement.innerHTML = `<strong>场景:</strong> ${subPlot.scene}`;
-                    subPlotElement.appendChild(subSceneElement);
-                }
-                
-                // 如果有角色信息，添加角色
-                if (subPlot.characters) {
-                    const subCharactersElement = document.createElement('div');
-                    subCharactersElement.className = 'plot-characters';
-                    subCharactersElement.innerHTML = `<strong>角色:</strong> ${subPlot.characters}`;
-                    subPlotElement.appendChild(subCharactersElement);
-                }
-                
-                // 添加到大纲容器
-                outlineElement.appendChild(subPlotElement);
-            });
+        // 创建标题
+        const titleElement = document.createElement('h4');
+        titleElement.textContent = plot.isMainPlot 
+            ? `主情节 ${plot.id}` 
+            : `子情节 ${plot.id}`;
+        plotElement.appendChild(titleElement);
+        
+        // 创建内容
+        const contentElement = document.createElement('p');
+        contentElement.textContent = plot.content;
+        plotElement.appendChild(contentElement);
+        
+        // 如果有场景信息，添加场景
+        if (plot.scene) {
+            const sceneElement = document.createElement('div');
+            sceneElement.className = 'plot-scene';
+            sceneElement.innerHTML = `<strong>场景:</strong> ${plot.scene}`;
+            plotElement.appendChild(sceneElement);
         }
+        
+        // 如果有角色信息，添加角色
+        if (plot.characters) {
+            const charactersElement = document.createElement('div');
+            charactersElement.className = 'plot-characters';
+            charactersElement.innerHTML = `<strong>角色:</strong> ${plot.characters}`;
+            plotElement.appendChild(charactersElement);
+        }
+        
+        // 添加到大纲容器
+        outlineElement.appendChild(plotElement);
     });
     
     // 将格式化后的大纲添加到容器
