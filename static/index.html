@@ -118,6 +118,66 @@
                     <button id="proceed-to-scene-expansion" disabled>完成大纲设计，开始场景扩写</button>
                 </div>
             </div>
+            
+            <!-- 阶段6: 子情节扩写 -->
+            <div id="stage-6" class="stage hidden">
+                <div class="stage-header">
+                    <h2>子情节扩写</h2>
+                    <span>状态: <span id="story-expansion-status">等待中...</span></span>
+                </div>
+                <div class="expansion-section">
+                    <p>基于已审阅的大纲，AI将为您扩写每个情节的具体内容。</p>
+                    <div id="expansion-progress">
+                        <div id="progress-bar-container">
+                            <div id="progress-bar"></div>
+                        </div>
+                        <div id="progress-text">0 / 0 情节已完成</div>
+                    </div>
+                    <button id="expand-story">开始扩写情节</button>
+                </div>
+                <div id="chapters-container">
+                    <h3>扩写的章节</h3>
+                    <div class="chapters-navigation">
+                        <select id="chapter-selector">
+                            <option value="">选择章节...</option>
+                        </select>
+                        <button id="prev-chapter" disabled>&lt; 上一章</button>
+                        <button id="next-chapter" disabled>下一章 &gt;</button>
+                    </div>
+                    <div id="chapter-content"></div>
+                </div>
+                <button id="proceed-to-draft" disabled>完成情节扩写，开始剧本草拟</button>
+            </div>
+            
+            <!-- 阶段7: 剧本草拟 -->
+            <div id="stage-7" class="stage hidden">
+                <div class="stage-header">
+                    <h2>剧本草拟</h2>
+                    <span>状态: <span id="script-draft-status">等待中...</span></span>
+                </div>
+                <div class="draft-section">
+                    <p>基于扩写的故事章节，AI将为您草拟标准格式的剧本。</p>
+                    <div id="draft-progress">
+                        <div id="draft-progress-bar-container">
+                            <div id="draft-progress-bar"></div>
+                        </div>
+                        <div id="draft-progress-text">0 / 0 章节已完成</div>
+                    </div>
+                    <button id="draft-script">开始草拟剧本</button>
+                </div>
+                <div id="drafts-container">
+                    <h3>剧本草稿</h3>
+                    <div class="drafts-navigation">
+                        <select id="draft-selector">
+                            <option value="">选择剧本段落...</option>
+                        </select>
+                        <button id="prev-draft" disabled>&lt; 上一段</button>
+                        <button id="next-draft" disabled>下一段 &gt;</button>
+                    </div>
+                    <div id="draft-content"></div>
+                </div>
+                <button id="proceed-to-dialogue" disabled>完成剧本草拟，开始角色对话补充</button>
+            </div>
         </div>
     </div>
     

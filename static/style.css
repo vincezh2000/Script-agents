@@ -156,4 +156,167 @@ button:disabled {
 
 .raw-outline.hidden {
     display: none;
+}
+
+/* 情节扩写相关样式 */
+.expansion-section {
+    margin-bottom: 20px;
+}
+
+#expansion-progress {
+    margin: 15px 0;
+}
+
+#progress-bar-container {
+    width: 100%;
+    height: 20px;
+    background-color: #f0f0f0;
+    border-radius: 10px;
+    margin-bottom: 5px;
+    overflow: hidden;
+}
+
+#progress-bar {
+    height: 100%;
+    background-color: #4CAF50;
+    width: 0%;
+    transition: width 0.3s ease;
+}
+
+#progress-text {
+    text-align: center;
+    font-size: 0.9em;
+    color: #555;
+}
+
+#chapters-container {
+    margin-top: 20px;
+}
+
+.chapters-navigation {
+    display: flex;
+    gap: 10px;
+    margin: 10px 0;
+    align-items: center;
+}
+
+#chapter-selector {
+    flex-grow: 1;
+    padding: 5px;
+    border-radius: 4px;
+    border: 1px solid #ddd;
+}
+
+#chapter-content {
+    border: 1px solid #ddd;
+    padding: 15px;
+    margin-top: 10px;
+    max-height: 400px;
+    overflow-y: auto;
+    background-color: #fff;
+    line-height: 1.6;
+}
+
+#chapter-content p {
+    margin-bottom: 15px;
+}
+
+#prev-chapter, #next-chapter {
+    padding: 5px 10px;
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+#prev-chapter:disabled, #next-chapter:disabled {
+    background-color: #cccccc;
+    cursor: not-allowed;
+}
+
+/* 剧本草拟相关样式 */
+.draft-section {
+    margin-bottom: 20px;
+}
+
+#draft-progress {
+    margin: 15px 0;
+}
+
+#draft-progress-bar-container {
+    width: 100%;
+    height: 20px;
+    background-color: #f0f0f0;
+    border-radius: 10px;
+    margin-bottom: 5px;
+    overflow: hidden;
+}
+
+#draft-progress-bar {
+    height: 100%;
+    background-color: #4CAF50;
+    width: 0%;
+    transition: width 0.3s ease;
+}
+
+#draft-progress-text {
+    text-align: center;
+    font-size: 0.9em;
+    color: #555;
+}
+
+#drafts-container {
+    margin-top: 20px;
+}
+
+.drafts-navigation {
+    display: flex;
+    gap: 10px;
+    margin: 10px 0;
+    align-items: center;
+}
+
+#draft-selector {
+    flex-grow: 1;
+    padding: 5px;
+    border-radius: 4px;
+    border: 1px solid #ddd;
+}
+
+#draft-content {
+    border: 1px solid #ddd;
+    padding: 15px;
+    margin-top: 10px;
+    max-height: 400px;
+    overflow-y: auto;
+    background-color: #fff;
+    line-height: 1.6;
+}
+
+/* 剧本元素样式 */
+.scene-heading {
+    font-weight: bold;
+    text-transform: uppercase;
+    margin: 15px 0 10px 0;
+    color: #1a1a1a;
+    background-color: #f5f5f5;
+    padding: 5px;
+    border-left: 3px solid #4CAF50;
+}
+
+.character-performance {
+    margin-bottom: 15px;
+    padding-left: 15px;
+}
+
+.character-name {
+    font-weight: bold;
+    color: #4169e1;
+    margin-bottom: 5px;
+}
+
+.performance {
+    padding-left: 20px;
+    color: #333;
 } 

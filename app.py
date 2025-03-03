@@ -22,6 +22,8 @@ character_writer_assistant = None
 character_editor_assistant = None  # 新增编辑器Assistant
 outline_writer_assistant = None  # 新增大纲撰写Assistant
 outline_editor_assistant = None  # 新增大纲编辑器Assistant
+story_writer_assistant = None  # 新增故事扩写Assistant
+script_writer_assistant = None  # 新增剧本草拟Assistant
 
 # 存储创作状态
 creation_state = {
@@ -35,7 +37,11 @@ creation_state = {
     'outline_xml': '',      # 存储原始XML格式的大纲数据
     'outline_data': {},      # 存储解析后的大纲数据
     'outline_iterations': 0,# 大纲迭代次数
-    'outline_editor_advice': '' # 存储大纲编辑器的建议
+    'outline_editor_advice': '', # 存储大纲编辑器的建议
+    'story_chapters': [],      # 存储生成的章节内容
+    'characters_appeared': [],  # 追踪已经出现的角色
+    'script_drafts': [],      # 存储生成的剧本草稿
+    'current_draft_index': 0  # 当前处理的剧本索引
 }
 
 # 存储运行中的任务
@@ -43,13 +49,15 @@ active_tasks = {}
 
 # 初始化thread和assistant
 def initialize_openai_resources():
-    global project_thread, character_writer_assistant, character_editor_assistant, outline_writer_assistant, outline_editor_assistant
+    global project_thread, character_writer_assistant, character_editor_assistant, outline_writer_assistant, outline_editor_assistant, story_writer_assistant, script_writer_assistant
     
     # 获取环境变量中的assistant ID
     character_writer_assistant_id = os.getenv("CHARACTER_WRITER_THREAD_ID")
     character_editor_assistant_id = os.getenv("CHARACTER_EDITOR_THREAD_ID")
     outline_writer_assistant_id = os.getenv("OUTLINE_WRITER_THREAD_ID")
     outline_editor_assistant_id = os.getenv("OUTLINE_EDITOR_THREAD_ID")
+    story_writer_assistant_id = os.getenv("STORY_WRITER_THREAD_ID")
+    script_writer_assistant_id = os.getenv("SCRIPT_WRITER_THREAD_ID")
     
     # 验证assistant ID是否存在
     if not character_writer_assistant_id:
@@ -60,6 +68,10 @@ def initialize_openai_resources():
         raise ValueError("OUTLINE_WRITER_THREAD_ID not found in environment variables")
     if not outline_editor_assistant_id:
         raise ValueError("OUTLINE_EDITOR_THREAD_ID not found in environment variables")
+    if not story_writer_assistant_id:
+        raise ValueError("STORY_WRITER_THREAD_ID not found in environment variables")
+    if not script_writer_assistant_id:
+        raise ValueError("SCRIPT_WRITER_THREAD_ID not found in environment variables")
     
     # 获取已创建的assistants
     try:
@@ -74,6 +86,12 @@ def initialize_openai_resources():
         
         outline_editor_assistant = client.beta.assistants.retrieve(outline_editor_assistant_id)
         print(f"Outline Editor Assistant loaded: {outline_editor_assistant.id}")
+        
+        story_writer_assistant = client.beta.assistants.retrieve(story_writer_assistant_id)
+        print(f"Story Writer Assistant loaded: {story_writer_assistant.id}")
+        
+        script_writer_assistant = client.beta.assistants.retrieve(script_writer_assistant_id)
+        print(f"Script Writer Assistant loaded: {script_writer_assistant.id}")
     except Exception as e:
         print(f"Error retrieving assistant: {e}")
         raise
@@ -138,7 +156,9 @@ def initialize():
         "character_writer_assistant_id": character_writer_assistant.id,
         "character_editor_assistant_id": character_editor_assistant.id,
         "outline_writer_assistant_id": outline_writer_assistant.id,
-        "outline_editor_assistant_id": outline_editor_assistant.id
+        "outline_editor_assistant_id": outline_editor_assistant.id,
+        "story_writer_assistant_id": story_writer_assistant.id,
+        "script_writer_assistant_id": script_writer_assistant.id
     })
 
 @app.route('/api/generate_characters', methods=['POST'])
@@ -904,6 +924,459 @@ def review_outline():
     
     # 启动处理线程
     thread = threading.Thread(target=process_review)
+    thread.daemon = True
+    thread.start()
+    
+    return jsonify({"status": "success", "task_id": task_id})
+
+# 排序情节ID的辅助函数
+def sort_key(id_str):
+    """
+    对情节ID进行排序的函数
+    处理不同格式的ID: 1, 2, 1a, 1b, 10, 10a 等
+    """
+    if id_str.isdigit():
+        return (int(id_str), '')
+    else:
+        # 对于类似 '1a', '2b' 的ID
+        num_part = re.match(r'(\d+)', id_str).group(1)
+        alpha_part = id_str[len(num_part):]
+        return (int(num_part), alpha_part)
+
+# 提取大纲中的所有情节ID，按照顺序排列
+def extract_plot_ids_from_outline(outline_xml):
+    plot_pattern = r'<plot_(\w+)>'
+    matches = re.finditer(plot_pattern, outline_xml)
+    plot_ids = [match.group(1) for match in matches]
+    
+    # 使用全局的sort_key函数
+    return sorted(plot_ids, key=sort_key)
+
+# 获取角色首次出现信息
+def get_character_info_with_first_appearance(character_name, characters_data, characters_xml, already_appeared):
+    # 找出对应角色的XML信息
+    char_info = ""
+    for char_id, char_data in characters_data.items():
+        if char_data['full_name'].strip() == character_name.strip():
+            # 检查是否第一次出现
+            if character_name not in already_appeared:
+                char_info += f"<character_{char_id}>\n"
+                char_info += f"<full_name>(first appearance) {char_data['full_name']}</full_name>\n"
+                char_info += f"<character_introduction>{char_data['introduction']}</character_introduction>\n"
+                char_info += f"</character_{char_id}>\n"
+                already_appeared.append(character_name)
+            else:
+                char_info += f"<character_{char_id}>\n"
+                char_info += f"<full_name>{char_data['full_name']}</full_name>\n"
+                char_info += f"<character_introduction>{char_data['introduction']}</character_introduction>\n"
+                char_info += f"</character_{char_id}>\n"
+            break
+    
+    return char_info
+
+# 用于构建故事扩写的消息
+def get_story_expansion_message(plot_id, plot_content, scene, characters, plots_processed, last_chapter, is_last_plot):
+    """构建故事扩写的消息"""
+    prompts = load_prompts()
+    
+    # 获取生成提示词模板
+    generate_prompt = prompts["story"]["writer"]["generate_prompt"]
+    
+    # 替换提示词中的内容
+    message = generate_prompt.replace("[current plot to be expanded]", plot_content)
+    message = message.replace("[preliminary storyline]", creation_state['storyline'])
+    message = message.replace("[scene]", scene)
+    message = message.replace("[involved characters' introduction (note: characters making their first appearance will be given a special remark.)]", characters)
+    
+    # 替换[previous plot]为之前的所有plot内容
+    previous_plots = "\n".join(plots_processed) if plots_processed else ""
+    message = message.replace("[previous plot]", previous_plots)
+    
+    # 替换[closest chapter]为最后一个章节内容
+    message = message.replace("[the closest previous just-occurred plot point's corresponding expanded story chapter]", last_chapter if last_chapter else "")
+    
+    # 替换[last plot]，判断当前plot是否为最后一个
+    last_plot_text = "The current story plot point you need to expand is the last plot point of the story. So, make sure that your expanded story chapter has a clear end to the story." if is_last_plot else ""
+    message = message.replace("[Whether or not the current plot is the last, \"\" if no, \"The current story plot point you need to expand is the last plot point of the story. So, make sure that your expanded story chapter has a clear end to the story.\" if yes.]", last_plot_text)
+    
+    return message
+
+@app.route('/api/expand_story', methods=['POST'])
+def expand_story():
+    """扩写故事情节"""
+    if not creation_state['outline_xml']:
+        return jsonify({"status": "error", "message": "No outline data available"})
+    
+    # 获取大纲中的所有情节ID
+    plot_ids = extract_plot_ids_from_outline(creation_state['outline_xml'])
+    
+    if not plot_ids:
+        return jsonify({"status": "error", "message": "No valid plot points found in outline"})
+    
+    # 创建任务ID
+    task_id = str(uuid.uuid4())
+    active_tasks[task_id] = {
+        "status": "processing",
+        "content": "",
+        "error": None,
+        "run_id": None,
+        "chapters": [],
+        "is_final": False
+    }
+    
+    # 初始化未出现过的角色列表
+    characters_not_appeared = list(creation_state['characters_data'].keys())
+    
+    # 清空已生成的章节
+    creation_state['story_chapters'] = []
+    creation_state['characters_appeared'] = []
+    
+    # 处理任务的函数
+    def process_expansion():
+        try:
+            # 存储已处理的plots和最后一个章节内容
+            plots_processed = []
+            last_chapter = ""
+            
+            for i, plot_id in enumerate(plot_ids):
+                plot_data = creation_state['outline_data'][plot_id]
+                
+                # 提取情节内容
+                plot_content = plot_data['content']
+                scene = plot_data['scene']
+                character_names = plot_data['characters'].split(',')
+                
+                # 处理角色信息
+                characters_info = []
+                for name in character_names:
+                    name = name.strip()
+                    # 在characters_data中查找角色
+                    for char_id, char_data in creation_state['characters_data'].items():
+                        if name.lower() in char_data['full_name'].lower():
+                            char_info = f"<character>{char_id}</character>\n"
+                            
+                            # 检查角色是否是首次出现
+                            is_first_appearance = char_id not in creation_state['characters_appeared']
+                            
+                            char_info += f"<full_name>{'(first appearance) ' if is_first_appearance else ''}{char_data['full_name']}</full_name>\n"
+                            char_info += f"<character_introduction>{char_data['introduction']}</character_introduction>"
+                            characters_info.append(char_info)
+                            
+                            # 将角色添加到已出现列表
+                            if is_first_appearance:
+                                creation_state['characters_appeared'].append(char_id)
+                            
+                            break
+                
+                characters_xml = "\n".join(characters_info)
+                
+                # 检查是否是最后一个情节
+                is_last_plot = i == len(plot_ids) - 1
+                
+                # 构建story writer的消息
+                message = get_story_expansion_message(
+                    plot_id, 
+                    plot_content, 
+                    scene, 
+                    characters_xml, 
+                    plots_processed, 
+                    last_chapter,
+                    is_last_plot
+                )
+                
+                # 添加当前plot到已处理列表
+                plot_xml = f"<{plot_id}>\n{plot_content}\nScene: {scene}\nCharacters: {plot_data['characters']}\n</{plot_id}>"
+                plots_processed.append(plot_xml)
+                
+                # 添加消息到线程
+                client.beta.threads.messages.create(
+                    thread_id=project_thread.id,
+                    role="user",
+                    content=message
+                )
+                
+                # 运行story writer assistant
+                run = client.beta.threads.runs.create(
+                    thread_id=project_thread.id,
+                    assistant_id=story_writer_assistant.id
+                )
+                
+                active_tasks[task_id]["run_id"] = run.id
+                
+                # 监控run状态
+                while True:
+                    run_status = client.beta.threads.runs.retrieve(
+                        thread_id=project_thread.id,
+                        run_id=run.id
+                    )
+                    
+                    if run_status.status == 'completed':
+                        break
+                    elif run_status.status in ['failed', 'cancelled', 'expired']:
+                        active_tasks[task_id]["status"] = "error"
+                        active_tasks[task_id]["error"] = f"Run failed with status: {run_status.status}"
+                        return
+                    
+                    time.sleep(1)
+                
+                # 获取消息
+                messages = client.beta.threads.messages.list(
+                    thread_id=project_thread.id
+                )
+                
+                # 获取最新的assistant消息
+                latest_message = None
+                for msg in messages.data:
+                    if msg.role == "assistant":
+                        latest_message = msg
+                        break
+                
+                if latest_message:
+                    content = latest_message.content[0].text.value
+                    
+                    # 提取<chapter>标签内的内容
+                    chapter_match = re.search(r'<chapter>(.*?)</chapter>', content, re.DOTALL)
+                    if chapter_match:
+                        chapter_content = f"<chapter>{chapter_match.group(1)}</chapter>"
+                        
+                        # 保存章节内容
+                        creation_state['story_chapters'].append(chapter_content)
+                        active_tasks[task_id]["chapters"].append({
+                            "plot_id": plot_id,
+                            "content": chapter_content
+                        })
+                        
+                        # 更新任务内容
+                        active_tasks[task_id]["content"] = json.dumps({
+                            "plot_id": plot_id,
+                            "chapter_content": chapter_content,
+                            "progress": {
+                                "current": i + 1,
+                                "total": len(plot_ids)
+                            }
+                        })
+                        
+                        # 更新最后一个章节内容用于下一次扩写
+                        last_chapter = chapter_content
+                    else:
+                        active_tasks[task_id]["status"] = "error"
+                        active_tasks[task_id]["error"] = "No chapter content found in response"
+                        return
+                else:
+                    active_tasks[task_id]["status"] = "error"
+                    active_tasks[task_id]["error"] = "Failed to get story writer response"
+                    return
+            
+            # 所有情节处理完成
+            creation_state['current_stage'] = 6  # 更新阶段为子情节扩写完成
+            active_tasks[task_id]["status"] = "completed"
+            active_tasks[task_id]["is_final"] = True
+            
+            # 合并所有章节
+            full_story = "\n".join(creation_state['story_chapters'])
+            active_tasks[task_id]["content"] = json.dumps({
+                "full_story": full_story,
+                "chapters": active_tasks[task_id]["chapters"],
+                "progress": {
+                    "current": len(plot_ids),
+                    "total": len(plot_ids)
+                }
+            })
+            
+        except Exception as e:
+            active_tasks[task_id]["status"] = "error"
+            active_tasks[task_id]["error"] = str(e)
+    
+    # 启动处理线程
+    thread = threading.Thread(target=process_expansion)
+    thread.daemon = True
+    thread.start()
+    
+    return jsonify({"status": "success", "task_id": task_id})
+
+def get_script_draft_message(chapter_content, scene, characters_info):
+    """构建剧本草拟的消息"""
+    prompts = load_prompts()
+    
+    # 获取生成提示词模板
+    generate_prompt = prompts["script"]["writer"]["generate_prompt"]
+    
+    # 替换提示词中的内容
+    message = generate_prompt.replace("[story chapter]", chapter_content)
+    message = message.replace("[scene]", scene)
+    message = message.replace("[involved characters' introductions]", characters_info)
+    
+    return message
+
+@app.route('/api/draft_script', methods=['POST'])
+def draft_script():
+    """草拟剧本"""
+    if not creation_state['story_chapters']:
+        return jsonify({"status": "error", "message": "No story chapters available"})
+    
+    # 创建任务ID
+    task_id = str(uuid.uuid4())
+    active_tasks[task_id] = {
+        "status": "processing",
+        "content": "",
+        "error": None,
+        "run_id": None,
+        "drafts": [],
+        "is_final": False
+    }
+    
+    # 清空已生成的剧本草稿
+    creation_state['script_drafts'] = []
+    creation_state['current_draft_index'] = 0
+    
+    # 处理任务的函数
+    def process_drafting():
+        try:
+            # 获取章节和对应的情节数据
+            chapters = creation_state['story_chapters']
+            
+            # 使用专门的函数从outline_xml中提取情节ID，确保只获取有效的情节
+            plot_ids = extract_plot_ids_from_outline(creation_state['outline_xml'])
+            
+            # 确保章节数量和情节数量一致
+            if len(chapters) != len(plot_ids):
+                active_tasks[task_id]["status"] = "error"
+                active_tasks[task_id]["error"] = "Chapter count does not match plot count"
+                return
+            
+            for i, (chapter, plot_id) in enumerate(zip(chapters, plot_ids)):
+                # 提取章节内容
+                chapter_match = re.search(r'<chapter>(.*?)</chapter>', chapter, re.DOTALL)
+                if not chapter_match:
+                    active_tasks[task_id]["status"] = "error"
+                    active_tasks[task_id]["error"] = f"Failed to extract content from chapter {i+1}"
+                    return
+                
+                chapter_content = chapter_match.group(1)
+                
+                # 获取对应情节的场景和角色
+                plot_data = creation_state['outline_data'][plot_id]
+                scene = plot_data['scene']
+                character_names = plot_data['characters'].split(',')
+                
+                # 处理角色信息
+                characters_info = []
+                for name in character_names:
+                    name = name.strip()
+                    # 在characters_data中查找角色
+                    for char_id, char_data in creation_state['characters_data'].items():
+                        if name.lower() in char_data['full_name'].lower():
+                            char_info = f"<character>{char_id}</character>\n"
+                            char_info += f"<full_name>{char_data['full_name']}</full_name>\n"
+                            char_info += f"<character_introduction>{char_data['introduction']}</character_introduction>"
+                            characters_info.append(char_info)
+                            break
+                
+                characters_xml = "\n".join(characters_info)
+                
+                # 构建script writer的消息
+                message = get_script_draft_message(chapter_content, scene, characters_xml)
+                
+                # 添加消息到线程
+                client.beta.threads.messages.create(
+                    thread_id=project_thread.id,
+                    role="user",
+                    content=message
+                )
+                
+                # 运行script writer assistant
+                run = client.beta.threads.runs.create(
+                    thread_id=project_thread.id,
+                    assistant_id=script_writer_assistant.id
+                )
+                
+                active_tasks[task_id]["run_id"] = run.id
+                
+                # 监控run状态
+                while True:
+                    run_status = client.beta.threads.runs.retrieve(
+                        thread_id=project_thread.id,
+                        run_id=run.id
+                    )
+                    
+                    if run_status.status == 'completed':
+                        break
+                    elif run_status.status in ['failed', 'cancelled', 'expired']:
+                        active_tasks[task_id]["status"] = "error"
+                        active_tasks[task_id]["error"] = f"Run failed with status: {run_status.status}"
+                        return
+                    
+                    time.sleep(1)
+                
+                # 获取消息
+                messages = client.beta.threads.messages.list(
+                    thread_id=project_thread.id
+                )
+                
+                # 获取最新的assistant消息
+                latest_message = None
+                for msg in messages.data:
+                    if msg.role == "assistant":
+                        latest_message = msg
+                        break
+                
+                if latest_message:
+                    content = latest_message.content[0].text.value
+                    
+                    # 提取<script_draft>标签内的内容
+                    script_match = re.search(r'<script_draft>(.*?)</script_draft>', content, re.DOTALL)
+                    if script_match:
+                        script_content = f"<script_draft>{script_match.group(1)}</script_draft>"
+                        
+                        # 保存剧本内容
+                        creation_state['script_drafts'].append(script_content)
+                        active_tasks[task_id]["drafts"].append({
+                            "chapter_index": i,
+                            "plot_id": plot_id,
+                            "content": script_content
+                        })
+                        
+                        # 更新任务内容
+                        active_tasks[task_id]["content"] = json.dumps({
+                            "chapter_index": i,
+                            "plot_id": plot_id,
+                            "draft_content": script_content,
+                            "progress": {
+                                "current": i + 1,
+                                "total": len(chapters)
+                            }
+                        })
+                    else:
+                        active_tasks[task_id]["status"] = "error"
+                        active_tasks[task_id]["error"] = "No script draft content found in response"
+                        return
+                else:
+                    active_tasks[task_id]["status"] = "error"
+                    active_tasks[task_id]["error"] = "Failed to get script writer response"
+                    return
+            
+            # 所有章节处理完成
+            creation_state['current_stage'] = 7  # 更新阶段为剧本草拟完成
+            active_tasks[task_id]["status"] = "completed"
+            active_tasks[task_id]["is_final"] = True
+            
+            # 合并所有剧本草稿
+            full_script = "\n\n".join(creation_state['script_drafts'])
+            active_tasks[task_id]["content"] = json.dumps({
+                "full_script": full_script,
+                "drafts": active_tasks[task_id]["drafts"],
+                "progress": {
+                    "current": len(chapters),
+                    "total": len(chapters)
+                }
+            })
+            
+        except Exception as e:
+            active_tasks[task_id]["status"] = "error"
+            active_tasks[task_id]["error"] = str(e)
+    
+    # 启动处理线程
+    thread = threading.Thread(target=process_drafting)
     thread.daemon = True
     thread.start()
     

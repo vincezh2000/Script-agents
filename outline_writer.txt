@@ -34,3 +34,14 @@ obey the above format and do not generate any redundant content!
 Here is the Editor's feedback on the story outline you recently wrote:\n<advice>\n[Editor's advice on the outline]\n</advice>\n
 Please revise your written story outline based on the advice.\nThe storyline and characters originally given to you were:\n
 Storyline:\n[preliminary storyline]\nCharacters:\n[characters]\nKeep the format of the story outline same as the one before your revision.
+
+The current story plot point you need to expand is:\n<plot_point>\n[current plot to be expanded]\n</plot_point>\nThe input storyline is:
+\n<storyline>\n[preliminary storyline]\nThe scene where the current story plot point happens is:\n<scene>[scene]</scene>\n
+The current story plot point involves the following characters:\n<characters>\n[involved characters' introduction
+ (note: characters making their first appearance will be given a special remark.)]\n</characters>\n
+ The previous story contents that have taken place are as follows:
+ \n[previous plot]\n
+ [closest chapter]\n
+ [last plot]
+ \n
+ Now, please expand the current given story plot point (<plot_point>) in a story outline into a chapter of complete story content which keeps coherent with the previous happened story content. Feel free to add details around the plot point but avoid deviating too far from it. While you have the flexibility to introduce additional details surrounding the plot point, it is essential to stay aligned with the original plot point's core content. To maintain conciseness, the expanded word count should be as minimal as possible, effectively unfolding the plot point while creating a complete story chapter.\nYour output format for the expanded story content should strictly follow:\n<chapter>\nThe story chapter you have expanded\n</chapter>\nPlease adhere strictly to this format and refrain from including any unnecessary content!"

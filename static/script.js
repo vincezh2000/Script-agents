@@ -104,6 +104,29 @@ document.getElementById('submit-storyline').addEventListener('click', function()
     });
 });
 
+// 处理角色设计生成后，点击"提交角色设计进行审阅"按钮
+document.getElementById('proceed-to-review').addEventListener('click', function() {
+    // 更新UI状态
+    document.getElementById('current-stage').textContent = '角色审阅与反馈';
+    
+    // 切换到审阅阶段
+    document.getElementById('stage-2').classList.remove('active');
+    document.getElementById('stage-2').classList.add('completed');
+    document.getElementById('stage-2').classList.add('hidden');
+    
+    document.getElementById('stage-3').classList.remove('hidden');
+    document.getElementById('stage-3').classList.add('active');
+    
+    document.getElementById('step-2').classList.remove('active');
+    document.getElementById('step-3').classList.add('active');
+    
+    // 更新状态文本
+    document.getElementById('character-review-status').textContent = '等待开始';
+    
+    // 启用审阅流程开始按钮
+    document.getElementById('start-review-process').disabled = false;
+});
+
 // 处理开始审阅流程按钮
 document.getElementById('start-review-process').addEventListener('click', function() {
     // 禁用按钮
@@ -628,28 +651,429 @@ document.getElementById('start-outline-review-process').addEventListener('click'
 
 // 处理进入场景扩写阶段的按钮
 document.getElementById('proceed-to-scene-expansion').addEventListener('click', function() {
-    alert('大纲审阅已完成！场景扩写功能将在下一阶段实现。');
-});
-
-// 处理进入审阅阶段的按钮
-document.getElementById('proceed-to-review').addEventListener('click', function() {
     // 更新UI状态
-    document.getElementById('current-stage').textContent = '角色审阅与反馈';
+    document.getElementById('current-stage').textContent = '子情节扩写';
     
-    // 切换到审阅阶段
-    document.getElementById('stage-2').classList.remove('active');
-    document.getElementById('stage-2').classList.add('completed');
-    document.getElementById('stage-2').classList.add('hidden');
+    // 切换到情节扩写阶段
+    document.getElementById('stage-5').classList.remove('active');
+    document.getElementById('stage-5').classList.add('completed');
+    document.getElementById('stage-5').classList.add('hidden');
     
-    document.getElementById('stage-3').classList.remove('hidden');
-    document.getElementById('stage-3').classList.add('active');
+    document.getElementById('stage-6').classList.remove('hidden');
+    document.getElementById('stage-6').classList.add('active');
     
-    document.getElementById('step-2').classList.remove('active');
-    document.getElementById('step-3').classList.add('active');
+    document.getElementById('step-5').classList.remove('active');
+    document.getElementById('step-6').classList.add('active');
     
     // 更新状态文本
-    document.getElementById('character-review-status').textContent = '等待开始';
+    document.getElementById('story-expansion-status').textContent = '等待开始';
     
-    // 启用审阅流程开始按钮
-    document.getElementById('start-review-process').disabled = false;
+    // 启用扩写按钮
+    document.getElementById('expand-story').disabled = false;
+});
+
+// 处理开始扩写情节按钮
+document.getElementById('expand-story').addEventListener('click', function() {
+    // 禁用按钮
+    document.getElementById('expand-story').disabled = true;
+    
+    // 清空章节选择器和内容区域
+    const chapterSelector = document.getElementById('chapter-selector');
+    chapterSelector.innerHTML = '<option value="">选择章节...</option>';
+    document.getElementById('chapter-content').textContent = '';
+    
+    // 禁用导航按钮
+    document.getElementById('prev-chapter').disabled = true;
+    document.getElementById('next-chapter').disabled = true;
+    
+    // 更新状态
+    document.getElementById('story-expansion-status').textContent = '扩写中...';
+    document.getElementById('progress-text').textContent = '0 / 0 情节已完成';
+    document.getElementById('progress-bar').style.width = '0%';
+    
+    let chapters = [];
+    let currentChapterIndex = 0;
+    
+    // 调用API开始情节扩写
+    fetch('/api/expand_story', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({}),
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === 'success') {
+            // 获取任务ID后，创建EventSource来监听任务进度
+            const taskId = data.task_id;
+            const eventSource = new EventSource(`/api/tasks/${taskId}/stream`);
+            
+            // 处理事件流
+            eventSource.onmessage = function(event) {
+                const data = JSON.parse(event.data);
+                
+                if (data.status === 'streaming') {
+                    // 正在进行中的状态更新
+                    document.getElementById('story-expansion-status').textContent = '正在扩写...';
+                } 
+                else if (data.status === 'complete') {
+                    try {
+                        // 解析章节数据
+                        const chapterData = JSON.parse(data.content);
+                        
+                        if (chapterData.progress) {
+                            // 更新进度条
+                            const progress = chapterData.progress;
+                            document.getElementById('progress-text').textContent = 
+                                `${progress.current} / ${progress.total} 情节已完成`;
+                            document.getElementById('progress-bar').style.width = 
+                                `${(progress.current / progress.total) * 100}%`;
+                            
+                            // 显示当前章节内容
+                            if (chapterData.chapter_content) {
+                                const chapterHtml = formatChapterContent(chapterData.chapter_content);
+                                document.getElementById('chapter-content').innerHTML = chapterHtml;
+                            }
+                        }
+                        
+                        // 章节已完成，更新界面
+                        if (data.is_final && chapterData.chapters) {
+                            chapters = chapterData.chapters;
+                            
+                            // 更新章节选择器
+                            chapters.forEach((chapter, index) => {
+                                const option = document.createElement('option');
+                                option.value = index;
+                                option.textContent = `情节 ${chapter.plot_id}`;
+                                chapterSelector.appendChild(option);
+                            });
+                            
+                            // 启用章节导航
+                            document.getElementById('chapter-selector').disabled = false;
+                            document.getElementById('prev-chapter').disabled = chapters.length <= 1;
+                            document.getElementById('next-chapter').disabled = chapters.length <= 1;
+                            document.getElementById('proceed-to-draft').disabled = false;
+                            
+                            // 显示所有章节的最后一章
+                            if (chapters.length > 0) {
+                                currentChapterIndex = chapters.length - 1;
+                                showChapter(currentChapterIndex);
+                                chapterSelector.value = currentChapterIndex;
+                            }
+                            
+                            // 更新状态
+                            document.getElementById('story-expansion-status').textContent = '已完成';
+                        }
+                        
+                    } catch (e) {
+                        console.error("解析章节数据失败:", e);
+                        document.getElementById('story-expansion-status').textContent = '数据解析错误';
+                    }
+                    
+                    // 完成任务后关闭事件流
+                    if (data.is_final) {
+                        eventSource.close();
+                    }
+                }
+                else if (data.status === 'error') {
+                    // 显示错误信息
+                    document.getElementById('chapter-content').textContent = `错误: ${data.message}`;
+                    document.getElementById('story-expansion-status').textContent = '发生错误';
+                    
+                    // 启用重试按钮
+                    document.getElementById('expand-story').disabled = false;
+                    
+                    // 关闭事件流
+                    eventSource.close();
+                }
+            };
+        }
+    });
+});
+
+// 显示指定索引的章节
+function showChapter(index) {
+    const chapterSelector = document.getElementById('chapter-selector');
+    const chapterContent = document.getElementById('chapter-content');
+    
+    if (chapterSelector.options.length <= index + 1) return; // +1 是因为第一个选项是"选择章节..."
+    
+    const option = chapterSelector.options[index + 1];
+    if (!option) return;
+    
+    // 从章节数据中获取内容
+    fetch('/api/get_creation_state')
+        .then(response => response.json())
+        .then(state => {
+            if (state.story_chapters && state.story_chapters.length > index) {
+                const chapterHtml = formatChapterContent(state.story_chapters[index]);
+                chapterContent.innerHTML = chapterHtml;
+            } else {
+                chapterContent.textContent = '无法加载章节内容';
+            }
+        })
+        .catch(error => {
+            console.error('Error loading chapter:', error);
+            chapterContent.textContent = '加载章节时发生错误';
+        });
+}
+
+// 格式化章节内容
+function formatChapterContent(chapterXml) {
+    // 提取<chapter>标签内的内容
+    const contentMatch = /<chapter>([\s\S]*?)<\/chapter>/.exec(chapterXml);
+    if (!contentMatch) return chapterXml;
+    
+    // 将内容分段，使其更易读
+    const content = contentMatch[1];
+    const paragraphs = content.split(/\n\n+/);
+    
+    return paragraphs.map(p => `<p>${p.trim()}</p>`).join('');
+}
+
+// 处理进入剧本草拟阶段的按钮
+document.getElementById('proceed-to-draft').addEventListener('click', function() {
+    // 更新UI状态
+    document.getElementById('current-stage').textContent = '剧本草拟';
+    
+    // 切换到剧本草拟阶段
+    document.getElementById('stage-6').classList.remove('active');
+    document.getElementById('stage-6').classList.add('completed');
+    document.getElementById('stage-6').classList.add('hidden');
+    
+    document.getElementById('stage-7').classList.remove('hidden');
+    document.getElementById('stage-7').classList.add('active');
+    
+    document.getElementById('step-6').classList.remove('active');
+    document.getElementById('step-7').classList.add('active');
+    
+    // 更新状态文本
+    document.getElementById('script-draft-status').textContent = '等待开始';
+    
+    // 启用草拟按钮
+    document.getElementById('draft-script').disabled = false;
+});
+
+// 处理开始草拟剧本按钮
+document.getElementById('draft-script').addEventListener('click', function() {
+    // 禁用按钮
+    document.getElementById('draft-script').disabled = true;
+    
+    // 清空剧本选择器和内容区域
+    const draftSelector = document.getElementById('draft-selector');
+    draftSelector.innerHTML = '<option value="">选择剧本段落...</option>';
+    document.getElementById('draft-content').textContent = '';
+    
+    // 禁用导航按钮
+    document.getElementById('prev-draft').disabled = true;
+    document.getElementById('next-draft').disabled = true;
+    
+    // 更新状态
+    document.getElementById('script-draft-status').textContent = '草拟中...';
+    document.getElementById('draft-progress-text').textContent = '0 / 0 章节已完成';
+    document.getElementById('draft-progress-bar').style.width = '0%';
+    
+    let drafts = [];
+    let currentDraftIndex = 0;
+    
+    // 调用API开始剧本草拟
+    fetch('/api/draft_script', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({}),
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === 'success') {
+            // 获取任务ID后，创建EventSource来监听任务进度
+            const taskId = data.task_id;
+            const eventSource = new EventSource(`/api/tasks/${taskId}/stream`);
+            
+            // 处理事件流
+            eventSource.onmessage = function(event) {
+                const data = JSON.parse(event.data);
+                
+                if (data.status === 'streaming') {
+                    // 正在进行中的状态更新
+                    document.getElementById('script-draft-status').textContent = '正在草拟...';
+                } 
+                else if (data.status === 'complete') {
+                    try {
+                        // 解析剧本数据
+                        const draftData = JSON.parse(data.content);
+                        
+                        if (draftData.progress) {
+                            // 更新进度条
+                            const progress = draftData.progress;
+                            document.getElementById('draft-progress-text').textContent = 
+                                `${progress.current} / ${progress.total} 章节已完成`;
+                            document.getElementById('draft-progress-bar').style.width = 
+                                `${(progress.current / progress.total) * 100}%`;
+                            
+                            // 显示当前剧本内容
+                            if (draftData.draft_content) {
+                                const draftHtml = formatScriptContent(draftData.draft_content);
+                                document.getElementById('draft-content').innerHTML = draftHtml;
+                            }
+                        }
+                        
+                        // 剧本已完成，更新界面
+                        if (data.is_final && draftData.drafts) {
+                            drafts = draftData.drafts;
+                            
+                            // 更新剧本选择器
+                            drafts.forEach((draft, index) => {
+                                const option = document.createElement('option');
+                                option.value = index;
+                                option.textContent = `章节 ${index + 1}: ${draft.plot_id}`;
+                                draftSelector.appendChild(option);
+                            });
+                            
+                            // 启用剧本导航
+                            document.getElementById('draft-selector').disabled = false;
+                            document.getElementById('prev-draft').disabled = drafts.length <= 1;
+                            document.getElementById('next-draft').disabled = drafts.length <= 1;
+                            document.getElementById('proceed-to-dialogue').disabled = false;
+                            
+                            // 显示所有剧本的最后一段
+                            if (drafts.length > 0) {
+                                currentDraftIndex = drafts.length - 1;
+                                showDraft(currentDraftIndex);
+                                draftSelector.value = currentDraftIndex;
+                            }
+                            
+                            // 更新状态
+                            document.getElementById('script-draft-status').textContent = '已完成';
+                        }
+                        
+                    } catch (e) {
+                        console.error("解析剧本数据失败:", e);
+                        document.getElementById('script-draft-status').textContent = '数据解析错误';
+                    }
+                    
+                    // 完成任务后关闭事件流
+                    if (data.is_final) {
+                        eventSource.close();
+                    }
+                }
+                else if (data.status === 'error') {
+                    // 显示错误信息
+                    document.getElementById('draft-content').textContent = `错误: ${data.message}`;
+                    document.getElementById('script-draft-status').textContent = '发生错误';
+                    
+                    // 启用重试按钮
+                    document.getElementById('draft-script').disabled = false;
+                    
+                    // 关闭事件流
+                    eventSource.close();
+                }
+            };
+        }
+    });
+});
+
+// 显示指定索引的剧本
+function showDraft(index) {
+    const draftSelector = document.getElementById('draft-selector');
+    const draftContent = document.getElementById('draft-content');
+    
+    if (draftSelector.options.length <= index + 1) return; // +1 是因为第一个选项是"选择剧本段落..."
+    
+    const option = draftSelector.options[index + 1];
+    if (!option) return;
+    
+    // 从剧本数据中获取内容
+    fetch('/api/get_creation_state')
+        .then(response => response.json())
+        .then(state => {
+            if (state.script_drafts && state.script_drafts.length > index) {
+                const draftHtml = formatScriptContent(state.script_drafts[index]);
+                draftContent.innerHTML = draftHtml;
+            } else {
+                draftContent.textContent = '无法加载剧本内容';
+            }
+        })
+        .catch(error => {
+            console.error('Error loading draft:', error);
+            draftContent.textContent = '加载剧本时发生错误';
+        });
+}
+
+// 格式化剧本内容
+function formatScriptContent(scriptXml) {
+    // 提取<script_draft>标签内的内容
+    const contentMatch = /<script_draft>([\s\S]*?)<\/script_draft>/.exec(scriptXml);
+    if (!contentMatch) return scriptXml;
+    
+    let content = contentMatch[1];
+    
+    // 替换场景标题标签
+    content = content.replace(/<scene_heading>([\s\S]*?)<\/scene_heading>/g, 
+        '<div class="scene-heading">$1</div>');
+    
+    // 替换角色表演标签
+    content = content.replace(/<character_performance>([\s\S]*?)<\/character_performance>/g, 
+        '<div class="character-performance">$1</div>');
+    
+    // 替换角色名称标签
+    content = content.replace(/<character>([\s\S]*?)<\/character>/g, 
+        '<div class="character-name">$1:</div>');
+    
+    // 替换表演内容标签
+    content = content.replace(/<performance>([\s\S]*?)<\/performance>/g, 
+        '<div class="performance">$1</div>');
+    
+    return content;
+}
+
+// 处理剧本选择器变化
+document.getElementById('draft-selector').addEventListener('change', function() {
+    const selectedIndex = parseInt(this.value);
+    if (!isNaN(selectedIndex)) {
+        showDraft(selectedIndex);
+        
+        // 更新导航按钮状态
+        document.getElementById('prev-draft').disabled = selectedIndex <= 0;
+        document.getElementById('next-draft').disabled = selectedIndex >= this.options.length - 2; // -2是因为还有一个"选择剧本段落..."
+    }
+});
+
+// 处理上一段按钮
+document.getElementById('prev-draft').addEventListener('click', function() {
+    const draftSelector = document.getElementById('draft-selector');
+    const currentIndex = parseInt(draftSelector.value);
+    
+    if (!isNaN(currentIndex) && currentIndex > 0) {
+        const newIndex = currentIndex - 1;
+        draftSelector.value = newIndex;
+        showDraft(newIndex);
+        
+        // 更新导航按钮状态
+        document.getElementById('prev-draft').disabled = newIndex <= 0;
+        document.getElementById('next-draft').disabled = false;
+    }
+});
+
+// 处理下一段按钮
+document.getElementById('next-draft').addEventListener('click', function() {
+    const draftSelector = document.getElementById('draft-selector');
+    const currentIndex = parseInt(draftSelector.value);
+    
+    if (!isNaN(currentIndex) && currentIndex < draftSelector.options.length - 2) {
+        const newIndex = currentIndex + 1;
+        draftSelector.value = newIndex;
+        showDraft(newIndex);
+        
+        // 更新导航按钮状态
+        document.getElementById('prev-draft').disabled = false;
+        document.getElementById('next-draft').disabled = newIndex >= draftSelector.options.length - 2;
+    }
+});
+
+// 处理进入对话补充阶段的按钮
+document.getElementById('proceed-to-dialogue').addEventListener('click', function() {
+    alert('剧本草拟已完成！角色对话补充功能将在下一阶段实现。');
 }); 
