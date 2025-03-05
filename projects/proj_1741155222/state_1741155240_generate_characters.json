@@ -1,0 +1,41 @@
+{
+  "current_stage": 1,
+  "storyline": "In Greek mythology, Pandora was the very first mortal woman, created by the gods at Zeus’s command using clay. Zeus initiated this creation as a form of punishment for humanity, retaliating against Prometheus for stealing fire and giving it to mankind. Known as \"the all-gifted one\" because of her extraordinary endowments, Pandora was both beautiful and cunning. Zeus bestowed upon her a mysterious box and arranged her marriage to Epimetheus, the brother of Prometheus.\n\nDespite being warned never to open the box, Pandora's insatiable curiosity ultimately got the better of her. When she finally lifted the lid, all manner of calamities—disasters, diseases, wars, and various evils—spilled out into the world, spreading chaos among humankind. However, amid all the unleashed woes, hope remained trapped inside the box, as Pandora quickly shut it before it could escape. This tale has since become a powerful symbol of how, even in the midst of overwhelming misfortune, hope endures.",
+  "characters_xml": "<characters>\n<character_1>\n<full_name>Pandora</full_name>\n<character_introduction>Pandora is the legendary first mortal woman, sculpted from clay by the gods under Zeus's orders. She possesses an enchanting beauty and innate cunning from the gifts bestowed upon her by the deities. Her insatiable curiosity, however, leads to the opening of the infamous box, unleashing chaos upon the world. Caught between the god’s grand design and her own desires, Pandora's journey is marked by a struggle to understand her place in a world impacted by her actions, representing the complex interplay of free will and fate.</character_introduction>\n</character_1>\n<character_2>\n<full_name>Epimetheus</full_name>\n<character_introduction>Epimetheus, the amiable yet shortsighted brother of Prometheus, is charged with marrying Pandora. He is characterized by his warmth and inherent trust in others, traits that lead to his acceptance of Pandora despite his previous cautions about gifts from Zeus. His relationship with Pandora is one of both love and tragedy, as he grapples with the ramifications of Pandora’s actions and his own role in the unfolding events.</character_introduction>\n</character_2>\n<character_3>\n<full_name>Prometheus</full_name>\n<character_introduction>Prometheus, the foresighted titan, defies Zeus by bringing fire to humanity, an act of rebellion that initiates Zeus’s punitive creation of Pandora. Known for his cunning intellect and profound empathy for mortals, Prometheus remains a silent yet significant force in the narrative, representing both the consequences of defiance against divine authority and the enduring spirit of human advancement.</character_introduction>\n</character_3>\n<character_4>\n<full_name>Zeus</full_name>\n<character_introduction>Zeus, the king of the gods, is the architect behind Pandora's creation. With his commanding presence and volatile temperament, he seeks retribution against Prometheus by orchestrating a seemingly benevolent yet ultimately treacherous gift to humanity. His actions underscore a complexity in divine justice, as his intentions are veiled beneath layers of supremacy and spite—his plans reflecting the dual nature of power and retribution.</character_introduction>\n</character_4>\n<character_5>\n<full_name>Hope (Elpis)</full_name>\n<character_introduction>Hope, personified as Elpis, is the last remnant left inside Pandora’s box after the unleashing of the world's calamities. Representing the enduring possibility of a better future, Hope remains trapped due to Pandora's quick reaction. Slight and ethereal, Elpis stands as a soothing counterbalance to the unleashed evils, embodying the resilience of humankind even amidst overwhelming adversity.</character_introduction>\n</character_5>\n</characters>",
+  "characters_data": {
+    "1": {
+      "full_name": "Pandora",
+      "introduction": "Pandora is the legendary first mortal woman, sculpted from clay by the gods under Zeus's orders. She possesses an enchanting beauty and innate cunning from the gifts bestowed upon her by the deities. Her insatiable curiosity, however, leads to the opening of the infamous box, unleashing chaos upon the world. Caught between the god’s grand design and her own desires, Pandora's journey is marked by a struggle to understand her place in a world impacted by her actions, representing the complex interplay of free will and fate."
+    },
+    "2": {
+      "full_name": "Epimetheus",
+      "introduction": "Epimetheus, the amiable yet shortsighted brother of Prometheus, is charged with marrying Pandora. He is characterized by his warmth and inherent trust in others, traits that lead to his acceptance of Pandora despite his previous cautions about gifts from Zeus. His relationship with Pandora is one of both love and tragedy, as he grapples with the ramifications of Pandora’s actions and his own role in the unfolding events."
+    },
+    "3": {
+      "full_name": "Prometheus",
+      "introduction": "Prometheus, the foresighted titan, defies Zeus by bringing fire to humanity, an act of rebellion that initiates Zeus’s punitive creation of Pandora. Known for his cunning intellect and profound empathy for mortals, Prometheus remains a silent yet significant force in the narrative, representing both the consequences of defiance against divine authority and the enduring spirit of human advancement."
+    },
+    "4": {
+      "full_name": "Zeus",
+      "introduction": "Zeus, the king of the gods, is the architect behind Pandora's creation. With his commanding presence and volatile temperament, he seeks retribution against Prometheus by orchestrating a seemingly benevolent yet ultimately treacherous gift to humanity. His actions underscore a complexity in divine justice, as his intentions are veiled beneath layers of supremacy and spite—his plans reflecting the dual nature of power and retribution."
+    },
+    "5": {
+      "full_name": "Hope (Elpis)",
+      "introduction": "Hope, personified as Elpis, is the last remnant left inside Pandora’s box after the unleashing of the world's calamities. Representing the enduring possibility of a better future, Hope remains trapped due to Pandora's quick reaction. Slight and ethereal, Elpis stands as a soothing counterbalance to the unleashed evils, embodying the resilience of humankind even amidst overwhelming adversity."
+    }
+  },
+  "character_iterations": 0,
+  "editor_advice": "",
+  "max_iterations": 2,
+  "outline_xml": "",
+  "outline_data": {},
+  "outline_iterations": 0,
+  "outline_editor_advice": "",
+  "story_chapters": [],
+  "characters_appeared": [],
+  "script_drafts": [],
+  "current_draft_index": 0,
+  "project_id": "proj_1741155222",
+  "last_updated_at": "2025-03-05T01:14:00.169518",
+  "created_at": "2025-03-05T01:13:42.114208"
+}

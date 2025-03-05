@@ -1,37 +1,65 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI辅助剧本创作系统</title>
+    <title>AI-Assisted Script Creation System</title>
     <link rel="stylesheet" href="/static/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
-    <h1>AI辅助剧本创作系统</h1>
+    <div id="project-browser" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2>Project Browser</h2>
+            
+            <div class="project-list-container">
+                <h3>My Projects</h3>
+                <div id="project-list" class="project-list">
+                    <p>Loading...</p>
+                </div>
+            </div>
+            
+            <div class="project-detail-container hidden">
+                <button id="back-to-projects"><i class="fas fa-arrow-left"></i> Back to Project List</button>
+                <h3>Project Details</h3>
+                <div id="project-detail" class="project-detail">
+                </div>
+                <div class="project-actions">
+                    <button id="load-project"><i class="fas fa-edit"></i> Load Project</button>
+                    <button id="new-project"><i class="fas fa-plus"></i> Create New Project</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="app-header">
+        <h1><i class="fas fa-film"></i> AI-Assisted Script Creation System</h1>
+    </div>
     
     <div class="container">
-        <!-- 左侧工作流程图 -->
+        <!-- Left workflow diagram -->
         <div class="workflow">
-            <h3>创作流程</h3>
-            <ol>
-                <li id="step-1" class="active">输入初步故事线</li>
-                <li id="step-2">角色设计 (Writer 1)</li>
-                <li id="step-3">角色审阅与反馈 (Editor)</li>
-                <li id="step-4">故事大纲撰写</li>
-                <li id="step-5">大纲审阅与反馈</li>
-                <li id="step-6">子情节扩写</li>
-                <li id="step-7">剧本草拟</li>
-                <li id="step-8">角色扮演补充对话</li>
-                <li id="step-9">输出完整剧本</li>
+            <h3><i class="fas fa-tasks"></i> Creation Process</h3>
+            <ol class="workflow-steps">
+                <li id="step-1" class="active">Input Initial Storyline</li>
+                <li id="step-2">Character Design</li>
+                <li id="step-3">Character Review & Feedback</li>
+                <li id="step-4">Story Outline Creation</li>
+                <li id="step-5">Outline Review & Feedback</li>
+                <li id="step-6">Scene Expansion</li>
+                <li id="step-7">Script Drafting</li>
+                <li id="step-8">Complete Script Output</li>
             </ol>
             
-            <div>
-                <h4>创作状态</h4>
-                <p>当前阶段: <span id="current-stage">输入初步故事线</span></p>
-                <p>迭代轮次: <span id="iteration-count">0</span></p>
+            <div class="status-panel">
+                <h4><i class="fas fa-info-circle"></i> Creation Status</h4>
+                <p>Current Stage: <span id="current-stage">Input Initial Storyline</span></p>
+                <p>Iteration Round: <span id="iteration-count">0</span></p>
                 
                 <div id="iteration-settings">
-                    <label for="max-iterations">最大迭代次数:</label>
+                    <label for="max-iterations">Maximum Iterations:</label>
                     <select id="max-iterations">
                         <option value="1">1</option>
                         <option value="2" selected>2</option>
@@ -41,145 +69,182 @@
             </div>
         </div>
         
-        <!-- 右侧主内容区 -->
+        <!-- Right main content area -->
         <div class="main-content">
-            <!-- 阶段1: 初步故事线 -->
+            <!-- Stage 1: Initial Storyline -->
             <div id="stage-1" class="stage active">
                 <div class="stage-header">
-                    <h2>初步故事线</h2>
+                    <h2><i class="fas fa-book-open"></i> Initial Storyline</h2>
+                    <button class="browse-projects-btn"><i class="fas fa-folder-open"></i> Browse Projects</button>
                 </div>
-                <textarea id="preliminary-storyline" placeholder="请输入您的初步故事线，描述故事的基本背景、主题或创意...">一个发生在未来世界的科幻故事，讲述一位普通工程师发现了能够读取人类记忆的技术，并因此卷入一场关乎人类隐私与自由的斗争...</textarea>
-                <button id="submit-storyline">提交并开始角色设计</button>
+                <div class="gpt-input-container">
+                    <textarea id="preliminary-storyline" placeholder="Write your initial storyline here... Describe the basic background, theme, or creative idea of your story.">A sci-fi story set in a future world, telling the story of an ordinary engineer who discovers technology that can read human memories and becomes involved in a struggle for human privacy and freedom...</textarea>
+                    <button id="submit-storyline"><i class="fas fa-paper-plane"></i></button>
+                </div>
+                <div class="input-description">
+                    <p><i class="fas fa-info-circle"></i> Your storyline will be used as the foundation for AI-generated character designs and plot development.</p>
+                </div>
             </div>
             
-            <!-- 阶段2: 角色设计 -->
+            <!-- Stage 2: Character Design -->
             <div id="stage-2" class="stage hidden">
                 <div class="stage-header">
-                    <h2>角色设计</h2>
-                    <span>状态: <span id="character-design-status">生成中...</span></span>
+                    <h2><i class="fas fa-user-edit"></i> Character Design</h2>
+                    <button class="browse-projects-btn"><i class="fas fa-folder-open"></i> Browse Projects</button>
+                    <span>Status: <span id="character-design-status">Generating...</span></span>
                 </div>
                 <div id="character-design-output"></div>
-                <button id="proceed-to-review" disabled>提交角色设计进行审阅</button>
+                <button id="proceed-to-review" disabled><i class="fas fa-check-circle"></i> Submit Character Design for Review</button>
             </div>
             
-            <!-- 阶段3: 角色审阅与反馈 -->
+            <!-- Stage 3: Character Review and Feedback -->
             <div id="stage-3" class="stage hidden">
                 <div class="stage-header">
-                    <h2>角色审阅与反馈</h2>
-                    <span>状态: <span id="character-review-status">等待中...</span></span>
+                    <h2><i class="fas fa-comments"></i> Character Review & Feedback</h2>
+                    <button class="browse-projects-btn"><i class="fas fa-folder-open"></i> Browse Projects</button>
+                    <span>Status: <span id="character-review-status">Waiting...</span></span>
                 </div>
                 <div class="review-section">
-                    <h3>编辑建议</h3>
+                    <h3><i class="fas fa-pen-fancy"></i> Editor Suggestions</h3>
                     <div id="editor-advice-output"></div>
                 </div>
                 <div class="review-section">
-                    <h3>修改后的角色设计</h3>
+                    <h3><i class="fas fa-user-check"></i> Revised Character Design</h3>
                     <div id="revised-character-output"></div>
                 </div>
                 <div id="review-controls">
-                    <button id="start-review-process">开始角色审阅流程</button>
-                    <button id="proceed-to-outline" disabled>完成角色设计，开始大纲编写</button>
+                    <button id="start-review-process"><i class="fas fa-play"></i> Start Character Review Process</button>
+                    <button id="proceed-to-outline" disabled><i class="fas fa-forward"></i> Complete Character Design, Begin Outline</button>
                 </div>
             </div>
             
-            <!-- 阶段4: 故事大纲撰写 -->
+            <!-- Stage 4: Story Outline Creation -->
             <div id="stage-4" class="stage hidden">
                 <div class="stage-header">
-                    <h2>故事大纲撰写</h2>
-                    <span>状态: <span id="outline-status">等待中...</span></span>
+                    <h2><i class="fas fa-project-diagram"></i> Story Outline Creation</h2>
+                    <button class="browse-projects-btn"><i class="fas fa-folder-open"></i> Browse Projects</button>
+                    <span>Status: <span id="outline-status">Waiting...</span></span>
                 </div>
                 <div class="outline-section">
-                    <p>基于您提供的故事线和已设计的角色，AI将为您撰写完整的故事大纲。</p>
-                    <button id="generate-outline">开始生成大纲</button>
+                    <p>Based on your storyline and designed characters, AI will create a complete story outline for you.</p>
+                    <button id="generate-outline"><i class="fas fa-cog"></i> Generate Outline</button>
                 </div>
                 <div id="outline-output-container">
-                    <h3>故事大纲</h3>
+                    <h3>Story Outline</h3>
                     <div id="outline-output"></div>
                 </div>
-                <button id="proceed-to-outline-review" disabled>提交大纲进行审阅</button>
+                <button id="proceed-to-outline-review" disabled><i class="fas fa-check-circle"></i> Submit Outline for Review</button>
             </div>
             
-            <!-- 阶段5: 大纲审阅与反馈 -->
+            <!-- Stage 5: Outline Review and Feedback -->
             <div id="stage-5" class="stage hidden">
                 <div class="stage-header">
-                    <h2>大纲审阅与反馈</h2>
-                    <span>状态: <span id="outline-review-status">等待中...</span></span>
+                    <h2><i class="fas fa-clipboard-check"></i> Outline Review & Feedback</h2>
+                    <button class="browse-projects-btn"><i class="fas fa-folder-open"></i> Browse Projects</button>
+                    <span>Status: <span id="outline-review-status">Waiting...</span></span>
                 </div>
                 <div class="review-section">
-                    <h3>编辑建议</h3>
+                    <h3><i class="fas fa-pen-fancy"></i> Editor Suggestions</h3>
                     <div id="outline-editor-advice-output"></div>
                 </div>
                 <div class="review-section">
-                    <h3>修改后的大纲</h3>
+                    <h3><i class="fas fa-file-alt"></i> Revised Outline</h3>
                     <div id="revised-outline-output"></div>
                 </div>
                 <div id="outline-review-controls">
-                    <button id="start-outline-review-process">开始大纲审阅流程</button>
-                    <button id="proceed-to-scene-expansion" disabled>完成大纲设计，开始场景扩写</button>
+                    <button id="start-outline-review-process"><i class="fas fa-play"></i> Start Outline Review Process</button>
+                    <button id="proceed-to-scene-expansion" disabled><i class="fas fa-forward"></i> Complete Outline, Begin Scene Expansion</button>
                 </div>
             </div>
             
-            <!-- 阶段6: 子情节扩写 -->
+            <!-- Stage 6: Scene Expansion -->
             <div id="stage-6" class="stage hidden">
                 <div class="stage-header">
-                    <h2>子情节扩写</h2>
-                    <span>状态: <span id="story-expansion-status">等待中...</span></span>
+                    <h2><i class="fas fa-expand-alt"></i> Scene Expansion</h2>
+                    <button class="browse-projects-btn"><i class="fas fa-folder-open"></i> Browse Projects</button>
+                    <span>Status: <span id="story-expansion-status">Waiting...</span></span>
                 </div>
                 <div class="expansion-section">
-                    <p>基于已审阅的大纲，AI将为您扩写每个情节的具体内容。</p>
+                    <p>Based on the reviewed outline, AI will expand each plot point with specific content.</p>
                     <div id="expansion-progress">
                         <div id="progress-bar-container">
                             <div id="progress-bar"></div>
                         </div>
-                        <div id="progress-text">0 / 0 情节已完成</div>
+                        <div id="progress-text">0 / 0 scenes completed</div>
                     </div>
-                    <button id="expand-story">开始扩写情节</button>
+                    <button id="expand-story"><i class="fas fa-cog"></i> Start Scene Expansion</button>
                 </div>
                 <div id="chapters-container">
-                    <h3>扩写的章节</h3>
+                    <h3>Expanded Chapters</h3>
                     <div class="chapters-navigation">
                         <select id="chapter-selector">
-                            <option value="">选择章节...</option>
+                            <option value="">Select chapter...</option>
                         </select>
-                        <button id="prev-chapter" disabled>&lt; 上一章</button>
-                        <button id="next-chapter" disabled>下一章 &gt;</button>
+                        <button id="prev-chapter" disabled><i class="fas fa-chevron-left"></i> Previous</button>
+                        <button id="next-chapter" disabled>Next <i class="fas fa-chevron-right"></i></button>
                     </div>
                     <div id="chapter-content"></div>
                 </div>
-                <button id="proceed-to-draft" disabled>完成情节扩写，开始剧本草拟</button>
+                <button id="proceed-to-draft" disabled><i class="fas fa-forward"></i> Complete Scene Expansion, Begin Script Drafting</button>
             </div>
             
-            <!-- 阶段7: 剧本草拟 -->
+            <!-- Stage 7: Script Drafting -->
             <div id="stage-7" class="stage hidden">
                 <div class="stage-header">
-                    <h2>剧本草拟</h2>
-                    <span>状态: <span id="script-draft-status">等待中...</span></span>
+                    <h2><i class="fas fa-feather-alt"></i> Script Drafting</h2>
+                    <button class="browse-projects-btn"><i class="fas fa-folder-open"></i> Browse Projects</button>
+                    <span>Status: <span id="script-draft-status">Waiting...</span></span>
                 </div>
                 <div class="draft-section">
-                    <p>基于扩写的故事章节，AI将为您草拟标准格式的剧本。</p>
+                    <p>Based on expanded story chapters, AI will draft a standard format script for you.</p>
                     <div id="draft-progress">
                         <div id="draft-progress-bar-container">
                             <div id="draft-progress-bar"></div>
                         </div>
-                        <div id="draft-progress-text">0 / 0 章节已完成</div>
+                        <div id="draft-progress-text">0 / 0 chapters completed</div>
                     </div>
-                    <button id="draft-script">开始草拟剧本</button>
+                    <button id="draft-script"><i class="fas fa-cog"></i> Start Script Drafting</button>
                 </div>
                 <div id="drafts-container">
-                    <h3>剧本草稿</h3>
+                    <h3>Script Draft</h3>
                     <div class="drafts-navigation">
                         <select id="draft-selector">
-                            <option value="">选择剧本段落...</option>
+                            <option value="">Select script section...</option>
                         </select>
-                        <button id="prev-draft" disabled>&lt; 上一段</button>
-                        <button id="next-draft" disabled>下一段 &gt;</button>
+                        <button id="prev-draft" disabled><i class="fas fa-chevron-left"></i> Previous</button>
+                        <button id="next-draft" disabled>Next <i class="fas fa-chevron-right"></i></button>
                     </div>
                     <div id="draft-content"></div>
                 </div>
-                <button id="proceed-to-dialogue" disabled>完成剧本草拟，开始角色对话补充</button>
+                <button id="proceed-to-final" disabled><i class="fas fa-forward"></i> Complete Script Draft, Generate Final Output</button>
+            </div>
+            
+            <!-- Stage 8: Complete Script Output -->
+            <div id="stage-8" class="stage hidden">
+                <div class="stage-header">
+                    <h2><i class="fas fa-file-export"></i> Complete Script Output</h2>
+                    <button class="browse-projects-btn"><i class="fas fa-folder-open"></i> Browse Projects</button>
+                    <span>Status: <span id="final-script-status">Waiting...</span></span>
+                </div>
+                <div class="final-script-section">
+                    <p>Your complete script is ready for download and review.</p>
+                    <div id="final-script-container">
+                        <h3>Final Script</h3>
+                        <div id="final-script-content"></div>
+                    </div>
+                    <div class="final-actions">
+                        <button id="download-script"><i class="fas fa-download"></i> Download Full Script</button>
+                        <button id="export-pdf"><i class="fas fa-file-pdf"></i> Export as PDF</button>
+                        <button id="restart-project"><i class="fas fa-redo"></i> Start New Project</button>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
+    
+    <footer class="app-footer">
+        <p>&copy; 2023 AI-Assisted Script Creation System. All rights reserved.</p>
+    </footer>
     
     <script src="/static/script.js"></script>
 </body>

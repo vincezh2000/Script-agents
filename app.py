@@ -7,6 +7,7 @@ import time
 import re
 import uuid
 import threading
+import datetime
 
 # 加载环境变量
 load_dotenv()
@@ -41,7 +42,9 @@ creation_state = {
     'story_chapters': [],      # 存储生成的章节内容
     'characters_appeared': [],  # 追踪已经出现的角色
     'script_drafts': [],      # 存储生成的剧本草稿
-    'current_draft_index': 0  # 当前处理的剧本索引
+    'current_draft_index': 0,  # 当前处理的剧本索引
+    'project_id': '',
+    'last_updated_at': ''
 }
 
 # 存储运行中的任务
@@ -150,6 +153,15 @@ def index():
 @app.route('/initialize', methods=['GET'])
 def initialize():
     initialize_openai_resources()
+    
+    # 初始化项目：创建新的项目ID和时间戳
+    creation_state['project_id'] = f"proj_{int(time.time())}"
+    creation_state['created_at'] = datetime.datetime.now().isoformat()
+    creation_state['last_updated_at'] = creation_state['created_at']
+    
+    # 保存初始状态
+    # save_creation_state('initialize')
+    
     return jsonify({
         "status": "success", 
         "thread_id": project_thread.id,
@@ -250,6 +262,9 @@ def generate_characters():
                     creation_state['characters_xml'] = characters_xml
                     creation_state['characters_data'] = parse_characters_xml(characters_xml)
                     creation_state['character_iterations'] = 0  # 重置迭代次数
+                    
+                    # 新增：保存创作状态
+                    save_creation_state('generate_characters')
                     
                     # 更新任务状态
                     active_tasks[task_id]["status"] = "completed"
@@ -380,6 +395,9 @@ def review_characters():
                     if advice.strip().lower() == "none":
                         # 角色设计已完成，可以进入下一阶段
                         creation_state['current_stage'] = 4  # 更新阶段为大纲编写
+                        
+                        # 新增：保存创作状态
+                        save_creation_state('review_characters')
                         
                         # 记录最后一次反馈
                         iteration_data["editor_advice"] = "完成！编辑器认为角色设计已经达到要求。"
@@ -552,7 +570,21 @@ def stream_task(task_id):
 
 @app.route('/api/get_creation_state', methods=['GET'])
 def get_creation_state():
-    return jsonify(creation_state)
+    """获取当前创作状态"""
+    try:
+        # 返回创作状态的深拷贝，避免外部修改
+        import copy
+        state_copy = copy.deepcopy(creation_state)
+        
+        # 记录一下请求
+        print(f"获取创作状态: 当前阶段={state_copy.get('current_stage', '未知')}, 项目ID={state_copy.get('project_id', '未知')}")
+        
+        return jsonify(state_copy)
+    except Exception as e:
+        print(f"获取创作状态时出错: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({"error": f"获取创作状态失败: {str(e)}"}), 500
 
 # 解析XML格式的大纲数据
 def parse_outline_xml(xml_content):
@@ -676,6 +708,9 @@ def generate_outline():
                     creation_state['outline_xml'] = outline_xml
                     creation_state['outline_data'] = parse_outline_xml(outline_xml)
                     creation_state['current_stage'] = 4  # 更新阶段为大纲撰写完成
+                    
+                    # 新增：保存创作状态
+                    save_creation_state('generate_outline')
                     
                     # 完成任务
                     active_tasks[task_id]["status"] = "completed"
@@ -1183,6 +1218,9 @@ def expand_story():
                 }
             })
             
+            # 新增: 在所有章节扩写完成后保存状态
+            save_creation_state('expand_story_completed')
+            
         except Exception as e:
             active_tasks[task_id]["status"] = "error"
             active_tasks[task_id]["error"] = str(e)
@@ -1244,7 +1282,7 @@ def draft_script():
                 active_tasks[task_id]["error"] = "Chapter count does not match plot count"
                 return
             
-            for i, (chapter, plot_id) in enumerate(zip(chapters, plot_ids)):
+            for i, (plot_id, chapter) in enumerate(zip(plot_ids, chapters)):
                 # 提取章节内容
                 chapter_match = re.search(r'<chapter>(.*?)</chapter>', chapter, re.DOTALL)
                 if not chapter_match:
@@ -1346,6 +1384,9 @@ def draft_script():
                                 "total": len(chapters)
                             }
                         })
+                        
+                        # 新增: 在每个剧本段落生成后保存状态
+                        save_creation_state(f'draft_script_segment_{i+1}')
                     else:
                         active_tasks[task_id]["status"] = "error"
                         active_tasks[task_id]["error"] = "No script draft content found in response"
@@ -1371,6 +1412,9 @@ def draft_script():
                 }
             })
             
+            # 新增: 在所有剧本草拟完成后保存状态
+            save_creation_state('draft_script_completed')
+            
         except Exception as e:
             active_tasks[task_id]["status"] = "error"
             active_tasks[task_id]["error"] = str(e)
@@ -1382,7 +1426,264 @@ def draft_script():
     
     return jsonify({"status": "success", "task_id": task_id})
 
+# 新增：确保项目存储目录存在
+def ensure_project_dirs():
+    """确保项目存储目录存在"""
+    if not os.path.exists('projects'):
+        os.makedirs('projects')
+
+# 新增：用于保存创作状态的函数
+def save_creation_state(stage_name=None):
+    """
+    将当前创作状态保存为JSON文件
+    
+    参数:
+        stage_name: 当前完成的阶段名称，用于文件命名
+    """
+    # 确保项目有ID
+    if not creation_state['project_id']:
+        creation_state['project_id'] = f"proj_{int(time.time())}"
+    
+    # 更新最后更新时间
+    creation_state['last_updated_at'] = datetime.datetime.now().isoformat()
+    
+    # 创建项目目录（如果不存在）
+    project_dir = os.path.join('projects', creation_state['project_id'])
+    if not os.path.exists(project_dir):
+        os.makedirs(project_dir)
+    
+    # 生成带有时间戳和阶段名称的文件名
+    timestamp = int(time.time())
+    stage_suffix = f"_{stage_name}" if stage_name else ""
+    filename = f"state_{timestamp}{stage_suffix}.json"
+    filepath = os.path.join(project_dir, filename)
+    
+    # 将创作状态写入JSON文件
+    with open(filepath, 'w', encoding='utf-8') as f:
+        json.dump(creation_state, f, ensure_ascii=False, indent=2)
+    
+    print(f"创作状态已保存至: {filepath}")
+    
+    # 同时更新最新状态文件（用于简单加载）
+    latest_filepath = os.path.join(project_dir, 'latest_state.json')
+    with open(latest_filepath, 'w', encoding='utf-8') as f:
+        json.dump(creation_state, f, ensure_ascii=False, indent=2)
+    
+    return filepath
+
+# 新增API：获取所有项目列表
+@app.route('/api/projects', methods=['GET'])
+def list_projects():
+    """获取所有已创建项目的列表"""
+    ensure_project_dirs()
+    
+    projects = []
+    if os.path.exists('projects'):
+        for project_id in os.listdir('projects'):
+            project_dir = os.path.join('projects', project_id)
+            if os.path.isdir(project_dir):
+                # 尝试加载项目的最新状态
+                latest_state_path = os.path.join(project_dir, 'latest_state.json')
+                if os.path.exists(latest_state_path):
+                    try:
+                        with open(latest_state_path, 'r', encoding='utf-8') as f:
+                            state = json.load(f)
+                            
+                        # 获取项目的基本信息
+                        project_info = {
+                            'project_id': project_id,
+                            'created_at': state.get('created_at', '未知'),
+                            'last_updated_at': state.get('last_updated_at', '未知'),
+                            'current_stage': state.get('current_stage', 1),
+                            'storyline': state.get('storyline', '无故事线')[:100] + '...' if len(state.get('storyline', '')) > 100 else state.get('storyline', '无故事线')
+                        }
+                        projects.append(project_info)
+                    except Exception as e:
+                        print(f"读取项目{project_id}出错: {e}")
+    
+    # 按最后更新时间排序，最新的在前面
+    projects.sort(key=lambda x: x.get('last_updated_at', ''), reverse=True)
+    
+    return jsonify({"projects": projects})
+
+# 新增API：加载指定项目
+@app.route('/api/projects/<project_id>/load', methods=['GET'])
+def load_project(project_id):
+    """加载指定项目的最新状态"""
+    project_dir = os.path.join('projects', project_id)
+    latest_state_path = os.path.join(project_dir, 'latest_state.json')
+    
+    if not os.path.exists(latest_state_path):
+        return jsonify({"error": "项目不存在或尚未保存状态"}), 404
+    
+    try:
+        with open(latest_state_path, 'r', encoding='utf-8') as f:
+            state = json.load(f)
+        
+        # 更新全局状态
+        global creation_state
+        creation_state = state
+        
+        # 创建一个会话标志，指示项目已加载
+        session_id = str(uuid.uuid4())
+        
+        # 返回一个处理后的状态，用于前端显示
+        return jsonify({
+            "status": "success", 
+            "session_id": session_id,
+            "state": format_state_for_display(state),
+            "current_stage": state.get("current_stage", 1)
+        })
+    except Exception as e:
+        return jsonify({"error": f"加载项目失败: {str(e)}"}), 500
+
+# 增强状态格式化函数，添加更多详细信息
+def format_state_for_display(state):
+    """格式化状态数据，便于前端显示"""
+    display_state = {
+        "基本信息": {
+            "项目ID": state.get("project_id", ""),
+            "创建时间": state.get("created_at", ""),
+            "最后更新": state.get("last_updated_at", ""),
+            "当前阶段": get_stage_name(state.get("current_stage", 1))
+        },
+        "故事线": state.get("storyline", ""),
+        "角色数量": len(state.get("characters_data", {})),
+        "章节数量": len(state.get("story_chapters", [])),
+        "剧本草稿数": len(state.get("script_drafts", []))
+    }
+    
+    # 添加角色信息
+    if state.get("characters_data"):
+        display_state["角色"] = {}
+        for char_id, char_info in state.get("characters_data", {}).items():
+            display_state["角色"][char_info.get("full_name", f"角色{char_id}")] = char_info.get("introduction", "无介绍")
+    
+    # 添加章节摘要信息
+    if state.get("story_chapters"):
+        display_state["章节摘要"] = []
+        for idx, chapter in enumerate(state.get("story_chapters", [])):
+            # 提取章节标题和简短内容预览
+            title = f"章节 {idx+1}"
+            content_preview = chapter[:100] + "..." if len(chapter) > 100 else chapter
+            display_state["章节摘要"].append({"标题": title, "预览": content_preview})
+    
+    # 添加剧本草稿摘要
+    if state.get("script_drafts"):
+        display_state["剧本草稿摘要"] = []
+        for idx, draft in enumerate(state.get("script_drafts", [])):
+            preview = draft[:100] + "..." if len(draft) > 100 else draft
+            display_state["剧本草稿摘要"].append({"编号": idx+1, "预览": preview})
+    
+    return display_state
+
+def get_stage_name(stage_num):
+    """根据阶段编号返回阶段名称"""
+    stages = {
+        1: "初步故事线",
+        2: "角色设计",
+        3: "角色审阅与反馈",
+        4: "故事大纲撰写",
+        5: "大纲审阅与反馈",
+        6: "子情节扩写",
+        7: "剧本草拟",
+        8: "角色扮演补充对话",
+        9: "输出完整剧本"
+    }
+    return stages.get(stage_num, f"未知阶段({stage_num})")
+
+# 添加API端点，在应用启动时设置初始加载状态
+@app.route('/api/set_initial_state', methods=['POST'])
+def set_initial_state():
+    """设置初始状态，用于项目加载后的初始化"""
+    data = request.json
+    project_id = data.get('project_id')
+    
+    if not project_id:
+        return jsonify({"error": "缺少项目ID"}), 400
+        
+    project_dir = os.path.join('projects', project_id)
+    latest_state_path = os.path.join(project_dir, 'latest_state.json')
+    
+    if not os.path.exists(latest_state_path):
+        return jsonify({"error": "项目不存在"}), 404
+        
+    try:
+        print(f"加载项目状态: {project_id}")
+        with open(latest_state_path, 'r', encoding='utf-8') as f:
+            state = json.load(f)
+            
+        # 更新全局状态，打印关键信息
+        global creation_state
+        prev_stage = creation_state.get('current_stage', '未知')
+        creation_state = state
+        new_stage = creation_state.get('current_stage', '未知')
+        
+        print(f"项目状态已加载: 从阶段{prev_stage}切换到阶段{new_stage}")
+        print(f"故事线长度: {len(state.get('storyline', ''))}")
+        print(f"角色数量: {len(state.get('characters_data', {}))}")
+        print(f"章节数量: {len(state.get('story_chapters', []))}")
+        print(f"剧本数量: {len(state.get('script_drafts', []))}")
+        
+        # 返回成功
+        return jsonify({
+            "status": "success",
+            "current_stage": state.get("current_stage", 1)
+        })
+    except Exception as e:
+        print(f"设置初始状态失败: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({"error": f"设置初始状态失败: {str(e)}"}), 500
+
+# 添加最终脚本输出API
+@app.route('/api/finalize_script', methods=['POST'])
+def finalize_script():
+    """将草拟的脚本整合为最终版本"""
+    
+    if not creation_state['script_drafts'] or len(creation_state['script_drafts']) == 0:
+        return jsonify({"status": "error", "message": "No script drafts available"}), 400
+    
+    try:
+        # 创建任务ID
+        task_id = str(uuid.uuid4())
+        active_tasks[task_id] = {
+            "status": "processing",
+            "content": "",
+            "error": None,
+            "is_final": False
+        }
+        
+        # 合并所有剧本草稿
+        full_script = "\n\n".join(creation_state['script_drafts'])
+        
+        # 更新阶段为最终脚本输出
+        creation_state['current_stage'] = 8
+        
+        # 更新任务状态
+        active_tasks[task_id]["status"] = "completed"
+        active_tasks[task_id]["is_final"] = True
+        active_tasks[task_id]["content"] = json.dumps({
+            "full_script": full_script
+        })
+        
+        # 保存最终状态
+        save_creation_state('final_script_completed')
+        
+        return jsonify({
+            "status": "success", 
+            "task_id": task_id, 
+            "full_script": full_script
+        })
+        
+    except Exception as e:
+        print(f"整合最终脚本时出错: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({"status": "error", "message": str(e)}), 500
+
 if __name__ == '__main__':
     # 在应用启动时立即初始化OpenAI资源
     initialize_openai_resources()
-    app.run(debug=True)
+    ensure_project_dirs()
+    app.run(debug=True, port=5000)

@@ -1,0 +1,37 @@
+{
+  "current_stage": 1,
+  "storyline": "一个发生在未来世界的科幻故事，讲述一位普通工程师发现了能够读取人类记忆的技术，并因此卷入一场关乎人类隐私与自由的斗争...",
+  "characters_xml": "<characters>\n<character_1>\n<full_name>Liang Wei</full_name>\n<character_introduction>Liang Wei, a 34-year-old male, is an unassuming yet brilliant engineer with a background in cognitive science and computer engineering. A quiet, observant individual who prefers methodical work over chaos, Liang stumbles upon the technology to read human memories. Struggling with an ethical dilemma, his strong moral compass pits him against corporate entities vying for control over this powerful innovation. He is a lone wolf, driven by a desire to safeguard human privacy, and his journey is marked by internal conflict, spurred by past experiences where technology was misused.</character_introduction>\n</character_1>\n<character_2>\n<full_name>Aria Chen</full_name>\n<character_introduction>Aria Chen is a 29-year-old female, a savvy and persuasive corporate operative sent to liaise with Liang. With sharp features and an air of confidence, she navigates through corporate espionage and public relations with slick precision. Although her initial aim is to secure the memory-reading technology for profit, Aria's encounters with Liang gradually uncover a deeper sense of responsibility and conflict within herself. Her gradual shift from antagonist to ally depicts her personal growth and the struggle between duty and conscience.</character_introduction>\n</character_2>\n<character_3>\n<full_name>Thomas Quinn</full_name>\n<character_introduction>Thomas Quinn, 45, is a seasoned journalist known for his tenacity in uncovering hidden truths. With an experienced and somewhat weary demeanor, he has seen the world shaped by technology and understands its impact on privacy and freedom. His motivation is to expose the technological powers threatening human rights. As a mentor figure to Liang, Quinn provides insights into the societal implications of widespread memory access, and their relationship deepens as they unite against larger conspiracies.</character_introduction>\n</character_3>\n<character_4>\n<full_name>Maya Torres</full_name>\n<character_introduction>Maya Torres is a 38-year-old female human rights lawyer and passionate advocate for personal freedom. With a sharp intellect and relentless drive, she becomes embroiled in the legal battle over the implications of the memory-reading device. Her background in technology law presents her as a formidable adversary against corporate machinations, forming an alliance with Liang and Quinn. Her personal stakes are high, given her past experiences with privacy breaches, and she is motivated by a vision of a future where technology serves, rather than controls, humanity.</character_introduction>\n</character_4>\n</characters>",
+  "characters_data": {
+    "1": {
+      "full_name": "Liang Wei",
+      "introduction": "Liang Wei, a 34-year-old male, is an unassuming yet brilliant engineer with a background in cognitive science and computer engineering. A quiet, observant individual who prefers methodical work over chaos, Liang stumbles upon the technology to read human memories. Struggling with an ethical dilemma, his strong moral compass pits him against corporate entities vying for control over this powerful innovation. He is a lone wolf, driven by a desire to safeguard human privacy, and his journey is marked by internal conflict, spurred by past experiences where technology was misused."
+    },
+    "2": {
+      "full_name": "Aria Chen",
+      "introduction": "Aria Chen is a 29-year-old female, a savvy and persuasive corporate operative sent to liaise with Liang. With sharp features and an air of confidence, she navigates through corporate espionage and public relations with slick precision. Although her initial aim is to secure the memory-reading technology for profit, Aria's encounters with Liang gradually uncover a deeper sense of responsibility and conflict within herself. Her gradual shift from antagonist to ally depicts her personal growth and the struggle between duty and conscience."
+    },
+    "3": {
+      "full_name": "Thomas Quinn",
+      "introduction": "Thomas Quinn, 45, is a seasoned journalist known for his tenacity in uncovering hidden truths. With an experienced and somewhat weary demeanor, he has seen the world shaped by technology and understands its impact on privacy and freedom. His motivation is to expose the technological powers threatening human rights. As a mentor figure to Liang, Quinn provides insights into the societal implications of widespread memory access, and their relationship deepens as they unite against larger conspiracies."
+    },
+    "4": {
+      "full_name": "Maya Torres",
+      "introduction": "Maya Torres is a 38-year-old female human rights lawyer and passionate advocate for personal freedom. With a sharp intellect and relentless drive, she becomes embroiled in the legal battle over the implications of the memory-reading device. Her background in technology law presents her as a formidable adversary against corporate machinations, forming an alliance with Liang and Quinn. Her personal stakes are high, given her past experiences with privacy breaches, and she is motivated by a vision of a future where technology serves, rather than controls, humanity."
+    }
+  },
+  "character_iterations": 0,
+  "editor_advice": "",
+  "max_iterations": 2,
+  "outline_xml": "",
+  "outline_data": {},
+  "outline_iterations": 0,
+  "outline_editor_advice": "",
+  "story_chapters": [],
+  "characters_appeared": [],
+  "script_drafts": [],
+  "current_draft_index": 0,
+  "project_id": "proj_1741027548",
+  "last_updated_at": "2025-03-03T13:46:09.531118",
+  "created_at": "2025-03-03T13:45:48.638688"
+}

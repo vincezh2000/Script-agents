@@ -1,0 +1,762 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>小说阅读器</title>
+    <style>
+        body {
+            font-family: 'Microsoft YaHei', Arial, sans-serif;
+            line-height: 1.6;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f9f7f1;
+            color: #333;
+        }
+        
+        h1 {
+            text-align: center;
+            margin-bottom: 30px;
+            color: #3a3a3a;
+        }
+        
+        .intro {
+            font-style: italic;
+            background-color: #fff;
+            padding: 15px;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        
+        .chapter-navigation {
+            display: flex;
+            justify-content: space-between;
+            margin: 20px 0;
+        }
+        
+        .chapter-list {
+            background-color: #fff;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            padding: 10px;
+            margin-bottom: 20px;
+        }
+        
+        .chapter-list h3 {
+            margin-top: 0;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 10px;
+        }
+        
+        .chapter-list ul {
+            list-style-type: none;
+            padding: 0;
+        }
+        
+        .chapter-list li {
+            padding: 8px 0;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .chapter-list li:hover {
+            color: #0066cc;
+        }
+        
+        .chapter-list li.active {
+            font-weight: bold;
+            color: #0066cc;
+        }
+        
+        .chapter-content {
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            min-height: 400px;
+        }
+        
+        .chapter-title {
+            text-align: center;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        button {
+            background-color: #0066cc;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        
+        button:hover {
+            background-color: #0055aa;
+        }
+        
+        button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+        
+        .characters-section {
+            background-color: #fff;
+            padding: 15px;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            margin-top: 20px;
+        }
+        
+        .character-card {
+            margin-bottom: 15px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .character-card:last-child {
+            border-bottom: none;
+        }
+        
+        .loading {
+            text-align: center;
+            font-style: italic;
+            color: #666;
+        }
+        
+        /* 切换视图按钮样式 */
+        .view-switcher {
+            display: flex;
+            justify-content: center;
+            margin: 20px 0;
+            gap: 10px;
+        }
+        
+        .view-switcher button {
+            padding: 10px 20px;
+            background-color: #f0f0f0;
+            color: #333;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        
+        .view-switcher button.active {
+            background-color: #0066cc;
+            color: white;
+            border-color: #0055aa;
+        }
+        
+        /* 剧本样式 */
+        .script-content {
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            display: none;
+        }
+        
+        .script-section {
+            margin-bottom: 30px;
+        }
+        
+        .scene-heading {
+            font-weight: bold;
+            text-transform: uppercase;
+            margin-bottom: 15px;
+            padding-bottom: 5px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .character-name {
+            font-weight: bold;
+            margin-top: 15px;
+            margin-bottom: 5px;
+        }
+        
+        .character-performance {
+            margin-left: 20px;
+            margin-bottom: 15px;
+        }
+        
+        .script-header {
+            text-align: center;
+            font-size: 1.2em;
+            font-weight: bold;
+            margin-bottom: 20px;
+            color: #0066cc;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        /* 增强剧本样式 */
+        .scene-heading {
+            background-color: #f5f5f5;
+            padding: 8px 12px;
+            border-left: 3px solid #0066cc;
+        }
+        
+        .character-name {
+            color: #0066cc;
+            margin-top: 15px;
+            font-weight: bold;
+        }
+        
+        .character-performance {
+            background-color: #fafafa;
+            padding: 8px 15px;
+            margin: 5px 0 15px 20px;
+            border-radius: 4px;
+            border-left: 2px solid #ddd;
+        }
+        
+        .script-raw-content {
+            white-space: pre-wrap;
+            font-family: monospace;
+            background-color: #f8f8f8;
+            padding: 15px;
+            border-radius: 5px;
+            margin-top: 10px;
+            font-size: 0.9em;
+        }
+        
+        .script-error {
+            color: #d9534f;
+            padding: 15px;
+            border: 1px solid #d9534f;
+            border-radius: 5px;
+            margin-top: 20px;
+        }
+        
+        .script-error pre {
+            background-color: #f8f8f8;
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+            font-size: 0.9em;
+        }
+    </style>
+</head>
+<body>
+    <h1>小说阅读器</h1>
+    
+    <div id="loading" class="loading">正在加载小说内容，请稍候...</div>
+    
+    <div id="novel-container" style="display: none;">
+        <div class="intro" id="story-intro"></div>
+        
+        <div class="view-switcher">
+            <button id="novel-view-btn" class="active">小说模式</button>
+            <button id="script-view-btn">剧本模式</button>
+        </div>
+        
+        <div class="chapter-navigation">
+            <button id="prev-chapter" disabled>上一章</button>
+            <span id="chapter-indicator">第 0/0 章</span>
+            <button id="next-chapter" disabled>下一章</button>
+        </div>
+        
+        <div class="chapter-list">
+            <h3>章节目录</h3>
+            <ul id="chapter-list"></ul>
+        </div>
+        
+        <div class="chapter-content">
+            <h2 class="chapter-title" id="current-chapter-title">章节标题</h2>
+            <div id="chapter-text"></div>
+        </div>
+        
+        <div class="script-content" id="script-content">
+            <h2 class="chapter-title" id="current-script-title">剧本草稿</h2>
+            <div id="script-text"></div>
+        </div>
+        
+        <div class="chapter-navigation">
+            <button id="prev-chapter-bottom" disabled>上一章</button>
+            <span id="chapter-indicator-bottom">第 0/0 章</span>
+            <button id="next-chapter-bottom" disabled>下一章</button>
+        </div>
+        
+        <div class="characters-section" id="characters-section">
+            <h3>角色介绍</h3>
+            <div id="characters-container"></div>
+        </div>
+    </div>
+
+    <script>
+        // Global variables
+        let novelData = null;
+        let currentChapter = 0;
+        let viewMode = 'novel'; // 'novel' or 'script'
+        
+        // Function to load the JSON data
+        async function loadNovelData() {
+            try {
+                const response = await fetch('latest_state.json');
+                if (!response.ok) {
+                    throw new Error('无法加载小说数据。确保latest_state.json文件在同一目录下。');
+                }
+                
+                novelData = await response.json();
+                displayNovel();
+            } catch (error) {
+                document.getElementById('loading').textContent = '错误: ' + error.message;
+                console.error('Error loading novel data:', error);
+            }
+        }
+        
+        // Function to display the novel
+        function displayNovel() {
+            // Hide loading and show novel container
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('novel-container').style.display = 'block';
+            
+            // Set the title and introduction
+            document.title = '小说: ' + novelData.storyline.split(',')[0];
+            document.getElementById('story-intro').textContent = novelData.storyline;
+            
+            // Populate chapter list
+            const chapterList = document.getElementById('chapter-list');
+            novelData.story_chapters.forEach((chapter, index) => {
+                const li = document.createElement('li');
+                li.textContent = `第 ${index + 1} 章`;
+                li.addEventListener('click', () => loadChapter(index));
+                chapterList.appendChild(li);
+            });
+            
+            // Display characters
+            displayCharacters();
+            
+            // 设置视图切换按钮事件监听器
+            document.getElementById('novel-view-btn').addEventListener('click', () => switchView('novel'));
+            document.getElementById('script-view-btn').addEventListener('click', () => switchView('script'));
+            
+            // 检查是否有剧本草稿可用
+            if (!novelData.script_drafts || !Array.isArray(novelData.script_drafts) || novelData.script_drafts.length === 0) {
+                document.getElementById('script-view-btn').disabled = true;
+                document.getElementById('script-view-btn').title = "没有可用的剧本草稿";
+            }
+            
+            // Load the first chapter
+            loadChapter(0);
+        }
+        
+        // 视图切换函数
+        function switchView(mode) {
+            if (viewMode === mode) return; // 如果已经是当前模式，不做任何操作
+            
+            viewMode = mode;
+            
+            // 更新按钮状态
+            document.getElementById('novel-view-btn').classList.toggle('active', mode === 'novel');
+            document.getElementById('script-view-btn').classList.toggle('active', mode === 'script');
+            
+            // 切换显示内容
+            if (mode === 'novel') {
+                document.querySelector('.chapter-content').style.display = 'block';
+                document.querySelector('.script-content').style.display = 'none';
+            } else {
+                document.querySelector('.chapter-content').style.display = 'none';
+                document.querySelector('.script-content').style.display = 'block';
+                // 加载当前章节对应的剧本
+                loadScript(currentChapter);
+            }
+        }
+        
+        // Function to load a specific chapter
+        function loadChapter(index) {
+            if (!novelData || index < 0 || index >= novelData.story_chapters.length) return;
+            
+            currentChapter = index;
+            
+            // Update chapter indicators
+            document.getElementById('chapter-indicator').textContent = `第 ${index + 1}/${novelData.story_chapters.length} 章`;
+            document.getElementById('chapter-indicator-bottom').textContent = `第 ${index + 1}/${novelData.story_chapters.length} 章`;
+            
+            // Update chapter content
+            document.getElementById('current-chapter-title').textContent = `第 ${index + 1} 章`;
+            
+            // Format the chapter text by converting line breaks to paragraphs
+            const chapterText = novelData.story_chapters[index]
+                .replace(/<chapter>/g, '')
+                .replace(/<\/chapter>/g, '')
+                .trim();
+            
+            const paragraphs = chapterText.split('\n\n');
+            const formattedText = paragraphs.map(p => `<p>${p}</p>`).join('');
+            document.getElementById('chapter-text').innerHTML = formattedText;
+            
+            // Update chapter list highlighting
+            const chapterItems = document.querySelectorAll('#chapter-list li');
+            chapterItems.forEach((item, i) => {
+                if (i === index) {
+                    item.classList.add('active');
+                } else {
+                    item.classList.remove('active');
+                }
+            });
+            
+            // Update button states
+            document.getElementById('prev-chapter').disabled = index === 0;
+            document.getElementById('next-chapter').disabled = index === novelData.story_chapters.length - 1;
+            document.getElementById('prev-chapter-bottom').disabled = index === 0;
+            document.getElementById('next-chapter-bottom').disabled = index === novelData.story_chapters.length - 1;
+            
+            // If in script view, also load the corresponding script
+            if (viewMode === 'script') {
+                loadScript(index);
+            }
+            
+            // Scroll to top
+            window.scrollTo(0, 0);
+        }
+        
+        // Function to load a specific script
+        function loadScript(index) {
+            if (!novelData.script_drafts || !Array.isArray(novelData.script_drafts) || 
+                index < 0 || index >= novelData.script_drafts.length || !novelData.script_drafts[index]) {
+                document.getElementById('script-text').innerHTML = '<p>此章节没有对应的剧本草稿</p>';
+                document.getElementById('current-script-title').textContent = `剧本草稿 (无)`;
+                return;
+            }
+            
+            // Update script title
+            document.getElementById('current-script-title').textContent = `剧本草稿 - 第 ${index + 1} 章`;
+            
+            // Parse and format the script content
+            const scriptXml = novelData.script_drafts[index];
+            
+            // 检查剧本内容是否为空或无效
+            if (!scriptXml || typeof scriptXml !== 'string' || scriptXml.trim() === '') {
+                document.getElementById('script-text').innerHTML = '<p>此章节的剧本草稿格式无效或为空</p>';
+                return;
+            }
+            
+            // 这里直接使用更简单的方法解析剧本
+            const formattedScript = parseScriptDraft(scriptXml, index + 1);
+            document.getElementById('script-text').innerHTML = formattedScript;
+        }
+        
+        // 更简单的剧本解析函数
+        function parseScriptDraft(scriptContent, chapterNum) {
+            let html = `<div class="script-header">第 ${chapterNum} 章剧本</div>`;
+            
+            try {
+                // 移除外层的<script_draft>标签
+                scriptContent = scriptContent.replace(/<script_draft>/, '').replace(/<\/script_draft>/, '');
+                
+                // 分离场景标题和角色表演部分
+                let currentScene = '';
+                let results = '';
+                
+                // 提取所有场景标题
+                const sceneRegex = /<scene_heading>([\s\S]*?)<\/scene_heading>/g;
+                let sceneMatch;
+                let scenes = [];
+                
+                while ((sceneMatch = sceneRegex.exec(scriptContent)) !== null) {
+                    scenes.push({
+                        fullMatch: sceneMatch[0],
+                        content: sceneMatch[1].trim(),
+                        index: sceneMatch.index
+                    });
+                }
+                
+                // 如果没有场景，创建一个虚拟场景
+                if (scenes.length === 0) {
+                    html += `<div class="script-section">
+                        <div class="scene-heading">默认场景</div>`;
+                        
+                    // 处理所有角色表演
+                    const perfRegex = /<character_performance>([\s\S]*?)<\/character_performance>/g;
+                    let perfMatch;
+                    
+                    while ((perfMatch = perfRegex.exec(scriptContent)) !== null) {
+                        const perfContent = perfMatch[1];
+                        const charMatch = /<character>([\s\S]*?)<\/character>/.exec(perfContent);
+                        const performanceMatch = /<performance>([\s\S]*?)<\/performance>/.exec(perfContent);
+                        
+                        if (charMatch && performanceMatch) {
+                            const charName = charMatch[1].trim();
+                            const perfText = performanceMatch[1].trim();
+                            
+                            html += `<div class="character-name">${charName}</div>
+                                    <div class="character-performance">${perfText}</div>`;
+                        }
+                    }
+                    
+                    html += `</div>`;
+                } else {
+                    // 处理每个场景
+                    for (let i = 0; i < scenes.length; i++) {
+                        const scene = scenes[i];
+                        html += `<div class="script-section">
+                            <div class="scene-heading">${scene.content}</div>`;
+                            
+                        // 确定此场景的内容范围
+                        let sceneStart = scene.index + scene.fullMatch.length;
+                        let sceneEnd = (i < scenes.length - 1) ? scenes[i + 1].index : scriptContent.length;
+                        let sceneContent = scriptContent.substring(sceneStart, sceneEnd);
+                        
+                        // 从场景内容中提取角色表演
+                        const perfRegex = /<character_performance>([\s\S]*?)<\/character_performance>/g;
+                        let perfMatch;
+                        
+                        while ((perfMatch = perfRegex.exec(sceneContent)) !== null) {
+                            const perfContent = perfMatch[1];
+                            const charMatch = /<character>([\s\S]*?)<\/character>/.exec(perfContent);
+                            const performanceMatch = /<performance>([\s\S]*?)<\/performance>/.exec(perfContent);
+                            
+                            if (charMatch && performanceMatch) {
+                                const charName = charMatch[1].trim();
+                                const perfText = performanceMatch[1].trim();
+                                
+                                html += `<div class="character-name">${charName}</div>
+                                        <div class="character-performance">${perfText}</div>`;
+                            }
+                        }
+                        
+                        html += `</div>`;
+                    }
+                }
+                
+                return html;
+                
+            } catch (error) {
+                console.error('解析剧本时出错:', error);
+                return `<div class="script-error">
+                    <p>解析剧本时出错: ${error.message}</p>
+                    <div class="script-raw-content">${scriptContent}</div>
+                </div>`;
+            }
+        }
+        
+        // Function to format script XML content
+        function formatScriptXml(scriptXml, chapterNum) {
+            // 处理可能的错误情况
+            try {
+                // Remove script_draft tags
+                let scriptContent = scriptXml.replace(/<script_draft>/g, '').replace(/<\/script_draft>/g, '');
+                
+                // Create HTML structure for the script
+                let html = `<div class="script-header">第 ${chapterNum} 章剧本</div>`;
+                
+                // 先尝试处理整个脚本的内容，不管有没有场景标记
+                // Find character performances across the entire script
+                const allPerfMatches = scriptContent.match(/<character_performance>[\s\S]*?<\/character_performance>/g) || [];
+                if (allPerfMatches.length === 0) {
+                    return `<div class="script-section">
+                        <div class="scene-heading">剧本内容</div>
+                        <div class="script-raw-content">${scriptContent}</div>
+                    </div>`;
+                }
+                
+                // Parse scene headings
+                const sceneMatches = scriptContent.match(/<scene_heading>[\s\S]*?<\/scene_heading>/g) || [];
+                
+                // If no scene headings found, just format the content simply
+                if (sceneMatches.length === 0) {
+                    // 尝试单独处理角色表演部分
+                    const perfMatches = scriptContent.match(/<character_performance>[\s\S]*?<\/character_performance>/g) || [];
+                    
+                    if (perfMatches.length > 0) {
+                        html += `<div class="script-section"><div class="scene-heading">场景</div>`;
+                        
+                        perfMatches.forEach(perfMatch => {
+                            // 提取角色名称
+                            const charMatch = perfMatch.match(/<character>(.*?)<\/character>/);
+                            const charName = charMatch ? charMatch[1] : '未知角色';
+                            
+                            // 提取表演文本
+                            const perfTextMatch = perfMatch.match(/<performance>([\s\S]*?)<\/performance>/);
+                            const perfText = perfTextMatch ? perfTextMatch[1].trim() : '';
+                            
+                            // 添加角色名称的高亮与链接
+                            const charId = findCharacterIdByName(charName);
+                            html += `<div class="character-name" ${charId ? `data-char-id="${charId}"` : ''}>${charName}</div>
+                                    <div class="character-performance">${perfText}</div>`;
+                        });
+                        
+                        html += `</div>`;
+                        return html;
+                    } else {
+                        return `<div class="script-section">${scriptContent}</div>`;
+                    }
+                }
+                
+                // Split content by scene headings
+                const scenes = scriptContent.split(/<scene_heading>[\s\S]*?<\/scene_heading>/g).filter(Boolean);
+                
+                // Process each scene
+                sceneMatches.forEach((sceneHeading, index) => {
+                    const sceneTitle = sceneHeading
+                        .replace(/<scene_heading>/g, '')
+                        .replace(/<\/scene_heading>/g, '')
+                        .trim();
+                    
+                    html += `<div class="script-section">
+                        <div class="scene-heading">${sceneTitle}</div>`;
+                    
+                    // Process character performances for this scene if available
+                    if (index < scenes.length) {
+                        const scene = scenes[index];
+                        
+                        // Find character performances
+                        const perfMatches = scene.match(/<character_performance>[\s\S]*?<\/character_performance>/g) || [];
+                        
+                        perfMatches.forEach(perfMatch => {
+                            // Extract character name
+                            const charMatch = perfMatch.match(/<character>(.*?)<\/character>/);
+                            const charName = charMatch ? charMatch[1] : '未知角色';
+                            
+                            // Extract performance text
+                            const perfTextMatch = perfMatch.match(/<performance>([\s\S]*?)<\/performance>/);
+                            const perfText = perfTextMatch ? perfTextMatch[1].trim() : '';
+                            
+                            // 添加角色名称的高亮与链接
+                            const charId = findCharacterIdByName(charName);
+                            html += `<div class="character-name" ${charId ? `data-char-id="${charId}"` : ''}>${charName}</div>
+                                    <div class="character-performance">${perfText}</div>`;
+                        });
+                    }
+                    
+                    html += `</div>`;
+                });
+                
+                return html;
+            } catch (error) {
+                console.error('解析剧本时出错:', error);
+                return `<div class="script-error">
+                    <p>解析剧本时出错: ${error.message}</p>
+                    <p>原始剧本内容:</p>
+                    <pre>${scriptXml}</pre>
+                </div>`;
+            }
+        }
+        
+        // 通过名称查找角色ID
+        function findCharacterIdByName(name) {
+            if (!novelData.characters_data) return null;
+            
+            for (const key in novelData.characters_data) {
+                if (novelData.characters_data[key].full_name === name) {
+                    return key;
+                }
+            }
+            return null;
+        }
+        
+        // Function to display character information
+        function displayCharacters() {
+            const charactersContainer = document.getElementById('characters-container');
+            
+            if (novelData.characters_data) {
+                Object.keys(novelData.characters_data).forEach(key => {
+                    const character = novelData.characters_data[key];
+                    
+                    const characterCard = document.createElement('div');
+                    characterCard.className = 'character-card';
+                    
+                    const characterName = document.createElement('h4');
+                    characterName.textContent = character.full_name;
+                    
+                    const characterIntro = document.createElement('p');
+                    characterIntro.textContent = character.introduction;
+                    
+                    characterCard.appendChild(characterName);
+                    characterCard.appendChild(characterIntro);
+                    charactersContainer.appendChild(characterCard);
+                });
+            } else {
+                charactersContainer.innerHTML = '<p>暂无角色信息</p>';
+            }
+        }
+        
+        // Navigation event listeners
+        document.getElementById('prev-chapter').addEventListener('click', () => {
+            loadChapter(currentChapter - 1);
+        });
+        
+        document.getElementById('next-chapter').addEventListener('click', () => {
+            loadChapter(currentChapter + 1);
+        });
+        
+        document.getElementById('prev-chapter-bottom').addEventListener('click', () => {
+            loadChapter(currentChapter - 1);
+        });
+        
+        document.getElementById('next-chapter-bottom').addEventListener('click', () => {
+            loadChapter(currentChapter + 1);
+        });
+        
+        // 添加调试功能
+        function addDebugButton() {
+            const debugBtn = document.createElement('button');
+            debugBtn.textContent = "调试剧本";
+            debugBtn.style.margin = "10px";
+            debugBtn.style.padding = "5px 10px";
+            debugBtn.style.backgroundColor = "#f8f8f8";
+            debugBtn.style.border = "1px solid #ddd";
+            debugBtn.style.borderRadius = "4px";
+            
+            debugBtn.addEventListener('click', () => {
+                if (novelData && novelData.script_drafts && novelData.script_drafts[currentChapter]) {
+                    const scriptContent = novelData.script_drafts[currentChapter];
+                    console.log('当前章节剧本内容:', scriptContent);
+                    
+                    // 创建一个简单的调试视图
+                    const debugView = document.createElement('div');
+                    debugView.style.position = "fixed";
+                    debugView.style.top = "10%";
+                    debugView.style.left = "10%";
+                    debugView.style.width = "80%";
+                    debugView.style.height = "80%";
+                    debugView.style.backgroundColor = "white";
+                    debugView.style.border = "1px solid #ddd";
+                    debugView.style.borderRadius = "5px";
+                    debugView.style.padding = "20px";
+                    debugView.style.boxShadow = "0 0 10px rgba(0,0,0,0.1)";
+                    debugView.style.overflow = "auto";
+                    debugView.style.zIndex = "1000";
+                    
+                    const closeBtn = document.createElement('button');
+                    closeBtn.textContent = "关闭";
+                    closeBtn.style.position = "absolute";
+                    closeBtn.style.top = "10px";
+                    closeBtn.style.right = "10px";
+                    closeBtn.addEventListener('click', () => document.body.removeChild(debugView));
+                    
+                    const pre = document.createElement('pre');
+                    pre.style.whiteSpace = "pre-wrap";
+                    pre.style.wordBreak = "break-all";
+                    pre.textContent = scriptContent;
+                    
+                    debugView.appendChild(closeBtn);
+                    debugView.appendChild(pre);
+                    document.body.appendChild(debugView);
+                } else {
+                    alert('当前章节没有可用的剧本内容');
+                }
+            });
+            
+            document.querySelector('.script-content').appendChild(debugBtn);
+        }
+        
+        // 在页面加载完成后添加调试按钮
+        window.addEventListener('load', () => {
+            setTimeout(() => {
+                if (document.querySelector('.script-content')) {
+                    addDebugButton();
+                }
+            }, 1000);
+        });
+
+        // Load the novel data when the page loads
+        window.addEventListener('load', loadNovelData);
+    </script>
+</body>
+</html> 

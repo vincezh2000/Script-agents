@@ -1,0 +1,41 @@
+{
+  "current_stage": 1,
+  "storyline": "A sci-fi story set in a future world, telling the story of an ordinary engineer who discovers technology that can read human memories and becomes involved in a struggle for human privacy and freedom...",
+  "characters_xml": "<characters>\n<character_1>\n<full_name>Elena Morales</full_name>\n<character_introduction>Elena is a 32-year-old engineer who works for a cutting-edge tech company. With short-cropped brunette hair and a penchant for practical clothing, she is unassuming yet fiercely intelligent. Her meticulous nature often isolates her, and she is haunted by the memory of her mother's privacy being violated by invasive technology. Driven by a desire to protect others from similar invasions, she becomes the reluctant hero of the story, learning to navigate a web of corporate intrigue and espionage.</character_introduction>\n</character_1>\n<character_2>\n<full_name>Dr. Marcus Voss</full_name>\n<character_introduction>Dr. Marcus Voss, a 45-year-old charismatic technocrat, is both a genius inventor and the CEO of TechnoCog, the company behind the memory-reading technology. He has slick silver hair and a commanding presence that masks his underlying ruthlessness. His motivation is driven by a vision of a society freed from secrets, yet his methods compromise personal freedoms, placing him in direct conflict with Elena.</character_introduction>\n</character_2>\n<character_3>\n<full_name>Sofia Tran</full_name>\n<character_introduction>Sofia is a 27-year-old investigative journalist with a knack for uncovering secrets others want hidden. With her fiery red hair and eclectic fashion sense, she is as unpredictable as she is passionate about her work. Her initial aim to expose corporate corruption aligns her with Elena. As the plot unfolds, Sofia becomes a vital ally, providing the moral compass and unexpected insights necessary to challenge Voss’s plans.</character_introduction>\n</character_3>\n<character_4>\n<full_name>Dylan Chen</full_name>\n<character_introduction>Dylan, a 35-year-old former hacker turned activist, is tech-savvy with a disheveled appearance characterized by his often unkempt hair and casual attire. He operates from the underground, striving to protect citizens from overreach and infringement. His past, filled with cyber exploits, gives him both the skills and the wisdom to assist Elena in navigating the treacherous technological landscape. Despite his gruff exterior, he forms a protective bond with Elena, seeing in her a chance to rectify his past misdeeds.</character_introduction>\n</character_4>\n<character_5>\n<full_name>Priya Kapoor</full_name>\n<character_introduction>Priya is a 50-year-old government official tasked with overseeing technology regulations. With her composed demeanor and sharp intellect, she often finds herself at odds between duty and morality. Her deep-seated belief in the importance of privacy stems from personal loss, positioning her as an internal ally who aids Elena discreetly. Her seasoned perspective and strategic mind play crucial roles in the unfolding rebellion against invasive tech controls.</character_introduction>\n</character_5>\n</characters>",
+  "characters_data": {
+    "1": {
+      "full_name": "Elena Morales",
+      "introduction": "Elena is a 32-year-old engineer who works for a cutting-edge tech company. With short-cropped brunette hair and a penchant for practical clothing, she is unassuming yet fiercely intelligent. Her meticulous nature often isolates her, and she is haunted by the memory of her mother's privacy being violated by invasive technology. Driven by a desire to protect others from similar invasions, she becomes the reluctant hero of the story, learning to navigate a web of corporate intrigue and espionage."
+    },
+    "2": {
+      "full_name": "Dr. Marcus Voss",
+      "introduction": "Dr. Marcus Voss, a 45-year-old charismatic technocrat, is both a genius inventor and the CEO of TechnoCog, the company behind the memory-reading technology. He has slick silver hair and a commanding presence that masks his underlying ruthlessness. His motivation is driven by a vision of a society freed from secrets, yet his methods compromise personal freedoms, placing him in direct conflict with Elena."
+    },
+    "3": {
+      "full_name": "Sofia Tran",
+      "introduction": "Sofia is a 27-year-old investigative journalist with a knack for uncovering secrets others want hidden. With her fiery red hair and eclectic fashion sense, she is as unpredictable as she is passionate about her work. Her initial aim to expose corporate corruption aligns her with Elena. As the plot unfolds, Sofia becomes a vital ally, providing the moral compass and unexpected insights necessary to challenge Voss’s plans."
+    },
+    "4": {
+      "full_name": "Dylan Chen",
+      "introduction": "Dylan, a 35-year-old former hacker turned activist, is tech-savvy with a disheveled appearance characterized by his often unkempt hair and casual attire. He operates from the underground, striving to protect citizens from overreach and infringement. His past, filled with cyber exploits, gives him both the skills and the wisdom to assist Elena in navigating the treacherous technological landscape. Despite his gruff exterior, he forms a protective bond with Elena, seeing in her a chance to rectify his past misdeeds."
+    },
+    "5": {
+      "full_name": "Priya Kapoor",
+      "introduction": "Priya is a 50-year-old government official tasked with overseeing technology regulations. With her composed demeanor and sharp intellect, she often finds herself at odds between duty and morality. Her deep-seated belief in the importance of privacy stems from personal loss, positioning her as an internal ally who aids Elena discreetly. Her seasoned perspective and strategic mind play crucial roles in the unfolding rebellion against invasive tech controls."
+    }
+  },
+  "character_iterations": 0,
+  "editor_advice": "",
+  "max_iterations": 2,
+  "outline_xml": "",
+  "outline_data": {},
+  "outline_iterations": 0,
+  "outline_editor_advice": "",
+  "story_chapters": [],
+  "characters_appeared": [],
+  "script_drafts": [],
+  "current_draft_index": 0,
+  "project_id": "proj_1741155059",
+  "last_updated_at": "2025-03-05T01:11:39.103509",
+  "created_at": "2025-03-05T01:10:59.746203"
+}
