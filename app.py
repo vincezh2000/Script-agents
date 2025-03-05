@@ -1660,12 +1660,20 @@ def finalize_script():
         # 更新阶段为最终脚本输出
         creation_state['current_stage'] = 8
         
+        # 准备项目导出数据
+        export_data = {
+            "storyline": creation_state.get('storyline', ''),
+            "characters": creation_state.get('characters_xml', ''),
+            "outline": creation_state.get('outline_xml', ''),
+            "chapters": creation_state.get('story_chapters', []),
+            "script_drafts": creation_state.get('script_drafts', []),
+            "full_script": full_script
+        }
+        
         # 更新任务状态
         active_tasks[task_id]["status"] = "completed"
         active_tasks[task_id]["is_final"] = True
-        active_tasks[task_id]["content"] = json.dumps({
-            "full_script": full_script
-        })
+        active_tasks[task_id]["content"] = json.dumps(export_data)
         
         # 保存最终状态
         save_creation_state('final_script_completed')
@@ -1673,7 +1681,8 @@ def finalize_script():
         return jsonify({
             "status": "success", 
             "task_id": task_id, 
-            "full_script": full_script
+            "full_script": full_script,
+            "export_data": export_data
         })
         
     except Exception as e:
@@ -1681,6 +1690,44 @@ def finalize_script():
         import traceback
         traceback.print_exc()
         return jsonify({"status": "error", "message": str(e)}), 500
+
+# 添加获取项目导出数据的API
+@app.route('/api/projects/<project_id>/export_data', methods=['GET'])
+def get_project_export_data(project_id):
+    """从项目文件中提取导出数据"""
+    project_dir = os.path.join('projects', project_id)
+    latest_state_path = os.path.join(project_dir, 'latest_state.json')
+    
+    if not os.path.exists(latest_state_path):
+        return jsonify({"error": "项目不存在或尚未保存状态"}), 404
+    
+    try:
+        with open(latest_state_path, 'r', encoding='utf-8') as f:
+            state = json.load(f)
+        
+        # 准备导出数据
+        export_data = {
+            "project_id": state.get('project_id', ''),
+            "created_at": state.get('created_at', ''),
+            "last_updated_at": state.get('last_updated_at', ''),
+            "storyline": state.get('storyline', ''),
+            "characters": state.get('characters_xml', ''),
+            "outline": state.get('outline_xml', ''),
+            "chapters": state.get('story_chapters', []),
+            "script_drafts": state.get('script_drafts', []),
+            "full_script": "\n\n".join(state.get('script_drafts', []))
+        }
+        
+        return jsonify({
+            "status": "success", 
+            "export_data": export_data
+        })
+        
+    except Exception as e:
+        print(f"获取项目导出数据失败: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({"error": f"获取项目导出数据失败: {str(e)}"}), 500
 
 if __name__ == '__main__':
     # 在应用启动时立即初始化OpenAI资源

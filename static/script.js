@@ -10,8 +10,7 @@ function getStageName(stageNum) {
         5: "大纲审阅与反馈",
         6: "子情节扩写",
         7: "剧本草拟",
-        8: "角色扮演补充对话",
-        9: "输出完整剧本"
+        8: "完整脚本输出"
     };
     const stageName = stages[stageNum] || `未知阶段(${stageNum})`;
     console.log(`阶段${stageNum}名称: ${stageName}`);
@@ -1125,11 +1124,6 @@ document.getElementById('next-draft').addEventListener('click', function() {
     }
 });
 
-// 处理进入对话补充阶段的按钮
-document.getElementById('proceed-to-dialogue').addEventListener('click', function() {
-    alert('剧本草拟已完成！角色对话补充功能将在下一阶段实现。');
-});
-
 // 项目浏览器功能
 document.addEventListener('DOMContentLoaded', function() {
     // 获取模态窗口元素
@@ -1409,14 +1403,35 @@ document.addEventListener('DOMContentLoaded', function() {
                     localStorage.setItem('loadedProjectId', projectId);
                     localStorage.setItem('currentStage', data.current_stage);
                     
-                    // 标记页面正在加载项目
-                    localStorage.setItem('isLoadingProject', 'true');
-                    
-                    // 关闭模态窗口
-                    modal.style.display = 'none';
-                    
-                    // 刷新页面以应用加载的状态
-                    location.reload();
+                    // 加载项目导出数据并存储到localStorage
+                    fetch(`/api/projects/${projectId}/export_data`)
+                        .then(response => response.json())
+                        .then(exportData => {
+                            if (exportData.status === 'success') {
+                                // 保存导出数据到localStorage
+                                localStorage.setItem('projectExportData', JSON.stringify(exportData.data));
+                                console.log('已加载项目导出数据到localStorage');
+                            } else {
+                                console.error('加载项目导出数据失败:', exportData.error);
+                            }
+                            
+                            // 标记页面正在加载项目
+                            localStorage.setItem('isLoadingProject', 'true');
+                            
+                            // 关闭模态窗口
+                            modal.style.display = 'none';
+                            
+                            // 刷新页面以应用加载的状态
+                            location.reload();
+                        })
+                        .catch(error => {
+                            console.error('加载项目导出数据失败:', error);
+                            
+                            // 即使导出数据加载失败，仍然继续加载项目
+                            localStorage.setItem('isLoadingProject', 'true');
+                            modal.style.display = 'none';
+                            location.reload();
+                        });
                 } else {
                     alert(`加载项目失败: ${data.error}`);
                 }
@@ -1668,8 +1683,7 @@ function fetchCreationStateAndUpdateUI(currentStage) {
                     5: "大纲审阅与反馈",
                     6: "子情节扩写",
                     7: "剧本草拟",
-                    8: "角色扮演补充对话",
-                    9: "输出完整剧本"
+                    8: "完整脚本输出"
                 };
                 return stages[stageNum] || `未知阶段(${stageNum})`;
             };
@@ -1967,6 +1981,12 @@ document.getElementById('proceed-to-final').addEventListener('click', function()
     .then(response => response.json())
     .then(data => {
         if (data.status === 'success') {
+            // 保存完整项目数据到localStorage以便下载功能使用
+            if (data.export_data) {
+                localStorage.setItem('project_export_data', JSON.stringify(data.export_data));
+                console.log('项目导出数据已保存到本地存储');
+            }
+            
             // 格式化并显示最终脚本
             document.getElementById('final-script-content').innerHTML = formatScriptContent(data.full_script);
             document.getElementById('final-script-status').textContent = '已完成';
@@ -1988,38 +2008,345 @@ document.getElementById('proceed-to-final').addEventListener('click', function()
 
 // 处理下载完整脚本按钮
 document.getElementById('download-script').addEventListener('click', function() {
-    // 获取创作状态
+    // 尝试从localStorage获取项目数据
+    const storedExportData = localStorage.getItem('project_export_data');
+    
+    if (storedExportData) {
+        try {
+            const exportData = JSON.parse(storedExportData);
+            generateAndDownloadProjectFile(exportData);
+            return;
+        } catch (error) {
+            console.error('解析本地存储的项目数据失败:', error);
+            // 如果解析失败，继续通过API获取数据
+        }
+    }
+    
+    // 如果没有本地存储数据，从API获取创作状态
     fetch('/api/get_creation_state')
         .then(response => response.json())
         .then(state => {
-            if (state.script_drafts && state.script_drafts.length > 0) {
-                // 合并所有剧本草稿为完整脚本
-                const fullScript = state.script_drafts.join("\n\n");
-                
-                // 创建下载链接
-                const blob = new Blob([fullScript], { type: 'text/plain' });
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = `script_${state.project_id || 'download'}.txt`;
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-                URL.revokeObjectURL(url);
+            if (state) {
+                generateAndDownloadProjectFile(state);
             } else {
-                alert('未找到剧本数据，无法下载');
+                alert('未找到项目数据，无法下载');
             }
         })
         .catch(error => {
             console.error('获取创作状态失败:', error);
-            alert('下载脚本时出错');
+            alert('下载项目数据时出错');
         });
 });
 
+// 辅助函数：生成并下载项目文件
+function generateAndDownloadProjectFile(data) {
+    // 准备所有内容
+    let content = '# AI-Assisted Script Creation Project\n\n';
+    
+    // 添加项目ID和创建日期
+    content += `Project ID: ${data.project_id || 'Unknown'}\n`;
+    content += `Created: ${data.created_at || 'Unknown'}\n`;
+    content += `Last Updated: ${data.last_updated_at || 'Unknown'}\n\n`;
+    
+    // 添加故事线
+    content += '## STORYLINE\n\n';
+    content += data.storyline ? data.storyline : 'No storyline available.\n';
+    content += '\n\n';
+    
+    // 添加角色信息
+    content += '## CHARACTERS\n\n';
+    if (data.characters || data.characters_xml) {
+        content += data.characters || data.characters_xml;
+    } else {
+        content += 'No character information available.\n';
+    }
+    content += '\n\n';
+    
+    // 添加大纲信息
+    content += '## OUTLINE\n\n';
+    if (data.outline || data.outline_xml) {
+        content += data.outline || data.outline_xml;
+    } else {
+        content += 'No outline information available.\n';
+    }
+    content += '\n\n';
+    
+    // 添加章节信息
+    content += '## CHAPTERS\n\n';
+    if (data.chapters || (data.story_chapters && data.story_chapters.length > 0)) {
+        const chapters = data.chapters || data.story_chapters;
+        chapters.forEach((chapter, index) => {
+            content += `### Chapter ${index + 1}\n\n`;
+            content += chapter;
+            content += '\n\n';
+        });
+    } else {
+        content += 'No chapter information available.\n';
+    }
+    content += '\n\n';
+    
+    // 添加剧本信息
+    content += '## SCRIPT\n\n';
+    if (data.script_drafts && data.script_drafts.length > 0) {
+        data.script_drafts.forEach((draft, index) => {
+            content += `### Script Section ${index + 1}\n\n`;
+            content += draft;
+            content += '\n\n';
+        });
+    } else if (data.full_script) {
+        content += data.full_script;
+    } else {
+        content += 'No script information available.\n';
+    }
+    
+    // 创建下载链接
+    const blob = new Blob([content], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `project_${data.project_id || 'download'}.txt`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+}
+
 // 处理导出PDF按钮
 document.getElementById('export-pdf').addEventListener('click', function() {
-    alert('PDF导出功能将在后续版本中提供');
+    // 禁用按钮，防止重复点击
+    document.getElementById('export-pdf').disabled = true;
+    
+    // 获取项目数据
+    let projectData = null;
+    
+    // 首先检查localStorage是否有数据
+    try {
+        const localData = localStorage.getItem('projectExportData');
+        if (localData) {
+            projectData = JSON.parse(localData);
+        }
+    } catch (error) {
+        console.error('解析localStorage中的项目数据失败:', error);
+    }
+    
+    // 如果localStorage没有数据，则从API获取
+    if (!projectData) {
+        // 从API获取项目数据
+        fetch('/api/get_creation_state')
+            .then(response => response.json())
+            .then(data => {
+                if (data) {
+                    generatePDF(data);
+                } else {
+                    alert('未找到项目数据，无法导出PDF');
+                    document.getElementById('export-pdf').disabled = false;
+                }
+            })
+            .catch(error => {
+                console.error('获取项目数据失败:', error);
+                alert('导出PDF时出错，请稍后重试');
+                document.getElementById('export-pdf').disabled = false;
+            });
+    } else {
+        // 使用localStorage中的数据
+        generatePDF(projectData);
+    }
 });
+
+// 生成PDF函数
+function generatePDF(data) {
+    // 获取PDF模板元素
+    const template = document.getElementById('pdf-template');
+    
+    // 更新模板内容
+    document.getElementById('pdf-title').textContent = `项目: ${data.project_id || 'AI剧本'}`;
+    document.getElementById('pdf-project-info').textContent = 
+        `创建时间: ${data.created_at || '未知'} | 最后更新: ${data.last_updated_at || '未知'}`;
+    
+    // 填充故事线内容
+    const storylineContent = document.getElementById('pdf-storyline-content');
+    storylineContent.innerHTML = '';
+    if (data.storyline) {
+        storylineContent.innerHTML = `<p>${data.storyline.replace(/\n/g, '</p><p>')}</p>`;
+    } else {
+        storylineContent.innerHTML = '<p>暂无故事线信息</p>';
+    }
+    
+    // 填充角色内容
+    const charactersContent = document.getElementById('pdf-characters-content');
+    charactersContent.innerHTML = '';
+    if (data.characters || data.characters_xml) {
+        const characterText = data.characters || data.characters_xml;
+        const characterLines = characterText.split('\n');
+        
+        let html = '';
+        let isInCharacter = false;
+        let characterName = '';
+        
+        characterLines.forEach(line => {
+            // 检测角色名称行
+            if (line.match(/^[^:]+:/) || line.match(/角色\s*\d+/i)) {
+                if (isInCharacter) {
+                    html += '</div>';
+                }
+                isInCharacter = true;
+                characterName = line.replace(/:.*$/, '');
+                html += `<div class="character-entry">`;
+                html += `<h3 style="color: #444;">${line}</h3>`;
+            } 
+            // 检测特性、背景等标题行
+            else if (line.match(/^\s*(特性|背景|动机|冲突|发展|备注)\s*[:：]/i)) {
+                html += `<h4 style="margin-top: 10px; color: #555;">${line}</h4>`;
+            }
+            // 普通内容行
+            else if (line.trim()) {
+                html += `<p>${line}</p>`;
+            }
+        });
+        
+        if (isInCharacter) {
+            html += '</div>';
+        }
+        
+        charactersContent.innerHTML = html || '<p>角色信息格式无法解析</p>';
+    } else {
+        charactersContent.innerHTML = '<p>暂无角色信息</p>';
+    }
+    
+    // 填充大纲内容
+    const outlineContent = document.getElementById('pdf-outline-content');
+    outlineContent.innerHTML = '';
+    if (data.outline || data.outline_xml) {
+        const outlineText = data.outline || data.outline_xml;
+        const outlineLines = outlineText.split('\n');
+        
+        let html = '';
+        let isInSection = false;
+        
+        outlineLines.forEach(line => {
+            // 检测章节标题行
+            if (line.match(/^(第[一二三四五六七八九十]+章|第\d+章|序章|尾声|Act \d+|Chapter \d+)/i)) {
+                if (isInSection) {
+                    html += '</div>';
+                }
+                isInSection = true;
+                html += `<div class="outline-section">`;
+                html += `<h3 style="color: #444; margin-top: 15px;">${line}</h3>`;
+            } 
+            // 检测场景或小节标题行
+            else if (line.match(/^(场景|小节|Scene)\s*\d+/i) || line.match(/^#+\s+/)) {
+                html += `<h4 style="margin-top: 10px; color: #555;">${line}</h4>`;
+            }
+            // 普通内容行
+            else if (line.trim()) {
+                html += `<p>${line}</p>`;
+            }
+        });
+        
+        if (isInSection) {
+            html += '</div>';
+        }
+        
+        outlineContent.innerHTML = html || '<p>大纲信息格式无法解析</p>';
+    } else {
+        outlineContent.innerHTML = '<p>暂无大纲信息</p>';
+    }
+    
+    // 填充剧本内容
+    const scriptContent = document.getElementById('pdf-script-content');
+    scriptContent.innerHTML = '';
+    if (data.full_script) {
+        scriptContent.innerHTML = `<pre style="font-family: 'Courier New', monospace; white-space: pre-wrap;">${data.full_script}</pre>`;
+    } else if (data.script_drafts && data.script_drafts.length > 0) {
+        let scriptHtml = '';
+        data.script_drafts.forEach((draft, index) => {
+            scriptHtml += `<h3 style="color: #444; margin-top: 20px;">第${index + 1}部分</h3>`;
+            scriptHtml += `<pre style="font-family: 'Courier New', monospace; white-space: pre-wrap;">${draft}</pre>`;
+        });
+        scriptContent.innerHTML = scriptHtml;
+    } else {
+        scriptContent.innerHTML = '<p>暂无剧本信息</p>';
+    }
+    
+    // 临时展示模板以便生成PDF
+    template.style.display = 'block';
+    
+    // 使用jsPDF生成PDF
+    setTimeout(() => {
+        // 配置jsPDF
+        const { jsPDF } = window.jspdf;
+        
+        // 创建jsPDF实例
+        const pdf = new jsPDF({
+            orientation: 'portrait',
+            unit: 'mm',
+            format: 'a4'
+        });
+        
+        // 使用html2canvas捕获模板
+        html2canvas(template, {
+            scale: 2,
+            logging: false,
+            useCORS: true
+        }).then(canvas => {
+            // 获取canvas上的图像数据
+            const imgData = canvas.toDataURL('image/png');
+            
+            // 获取PDF尺寸和canvas尺寸
+            const pdfWidth = pdf.internal.pageSize.getWidth();
+            const pdfHeight = pdf.internal.pageSize.getHeight();
+            const canvasWidth = canvas.width;
+            const canvasHeight = canvas.height;
+            
+            // 计算PDF所需的页数
+            const pagesCount = Math.ceil(canvasHeight / (canvasWidth * pdfHeight / pdfWidth));
+            
+            // 添加图像到PDF，可能跨多页
+            let currentPosition = 0;
+            
+            for (let i = 0; i < pagesCount; i++) {
+                // 如果不是第一页，添加新页
+                if (i > 0) {
+                    pdf.addPage();
+                }
+                
+                // 计算裁剪区域高度
+                const canvasSliceHeight = (canvasWidth * pdfHeight / pdfWidth);
+                
+                // 添加图像，裁剪到当前页
+                pdf.addImage(
+                    imgData, 
+                    'PNG', 
+                    0, 
+                    0, 
+                    pdfWidth, 
+                    pdfHeight, 
+                    undefined, 
+                    'FAST', 
+                    0, 
+                    -currentPosition
+                );
+                
+                // 更新当前位置
+                currentPosition += canvasSliceHeight;
+            }
+            
+            // 保存PDF文件
+            pdf.save(`项目_${data.project_id || 'AI剧本'}.pdf`);
+            
+            // 隐藏模板
+            template.style.display = 'none';
+            
+            // 重新启用按钮
+            document.getElementById('export-pdf').disabled = false;
+        }).catch(error => {
+            console.error('生成PDF出错:', error);
+            alert('生成PDF出错，请稍后重试');
+            template.style.display = 'none';
+            document.getElementById('export-pdf').disabled = false;
+        });
+    }, 100);
+}
 
 // 处理重新开始项目按钮
 document.getElementById('restart-project').addEventListener('click', function() {
@@ -2028,4 +2355,67 @@ document.getElementById('restart-project').addEventListener('click', function() 
         clearProjectStorage();
         location.reload();
     }
+});
+
+// 修改完整脚本输出阶段的逻辑
+document.getElementById('view-final-script').addEventListener('click', function() {
+    // 更新UI
+    document.getElementById('current-stage').textContent = '完整脚本输出';
+    
+    document.getElementById('stage-7').classList.remove('active');
+    document.getElementById('stage-7').classList.add('completed');
+    document.getElementById('stage-7').classList.add('hidden');
+    
+    document.getElementById('stage-8').classList.remove('hidden');
+    document.getElementById('stage-8').classList.add('active');
+    
+    document.getElementById('step-7').classList.remove('active');
+    document.getElementById('step-8').classList.add('active');
+    
+    // 更新状态
+    document.getElementById('final-script-status').textContent = '生成中...';
+    
+    // 获取全部剧本草稿
+    fetch('/api/get_draft_scripts')
+        .then(response => response.json())
+        .then(data => {
+            // 如果成功获取草稿
+            if (data.status === 'success' && data.drafts.length > 0) {
+                // 合并所有草稿内容
+                const fullScript = data.drafts.join("\n\n");
+                
+                // 格式化并显示
+                document.getElementById('final-script-content').innerHTML = formatScriptContent(fullScript);
+                document.getElementById('final-script-status').textContent = '已完成';
+                
+                // 准备导出数据
+                fetch('/api/get_creation_state')
+                    .then(response => response.json())
+                    .then(state => {
+                        if (state) {
+                            // 保存导出数据到localStorage
+                            localStorage.setItem('projectExportData', JSON.stringify(state));
+                            console.log('已保存项目导出数据到localStorage');
+                            
+                            // 启用下载按钮
+                            document.getElementById('download-script').disabled = false;
+                            document.getElementById('export-pdf').disabled = false;
+                        }
+                    })
+                    .catch(error => {
+                        console.error('获取创作状态失败:', error);
+                        // 即使获取失败，仍然启用下载按钮
+                        document.getElementById('download-script').disabled = false;
+                        document.getElementById('export-pdf').disabled = false;
+                    });
+            } else {
+                document.getElementById('final-script-content').textContent = '无法获取剧本草稿';
+                document.getElementById('final-script-status').textContent = '生成失败';
+            }
+        })
+        .catch(error => {
+            console.error('获取剧本草稿失败:', error);
+            document.getElementById('final-script-content').textContent = '获取剧本草稿时出错，请刷新重试';
+            document.getElementById('final-script-status').textContent = '生成失败';
+        });
 });
